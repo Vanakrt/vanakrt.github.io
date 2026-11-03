@@ -142,8 +142,8 @@
     <div class="row">
       <label>Vektorite mõõtkava
         <select id="scaleMode">
-          <option value="auto" selected>kohanduv</option>
-          <option value="fixed">fikseeritud</option>
+          <option value="auto" selected>kohanduv (pikim vektor alati sama pikk)</option>
+          <option value="fixed">fikseeritud (pikkus ∝ E kogu joonisel)</option>
         </select>
       </label>
     </div>
@@ -151,6 +151,7 @@
       <input type="range" id="fixedScale" min="2" max="7" step="0.1" value="4">
       <span class="small" id="fixedVal"></span>
     </div>
+    <div class="small" id="scaleExpl" style="margin:-2px 0 10px"></div>
     <div class="row"><button id="clearLines">Kustuta minu joonistatud jõujooned</button></div>
 
     <h2>Väli kursori kohas</h2>
@@ -683,7 +684,7 @@ function drawHover(g, P){
   let s;
   if (opts.scaleMode === 'auto') s = 120 / Math.max(ms, ...mags);
   else s = 100 / Math.pow(10, opts.fixedLog);
-  const scaleText = '100 px ≙ ' + fmtE(100 / s);
+  const scaleText = '100 px ≙ ' + fmtE(100 / s) + (opts.scaleMode === 'auto' ? ' (kehtib selles punktis)' : ' (kogu joonisel)');
 
   if (P.length > 1){
     comps.forEach((f, i) => drawArrow(g, x, y, x + f[0]*s, y + f[1]*s, colorOf(P[i].idx), 2, false));
@@ -706,7 +707,7 @@ function drawHover(g, P){
   if (ms*s > 14) label(g, 'E', x + sum[0]*s + sum[0]/ms*14, y + sum[1]*s + sum[1]/ms*14, '#111827');
   g.fillStyle = '#111827'; g.beginPath(); g.arc(x, y, 3, 0, 2*Math.PI); g.fill();
 
-  let html = `<div class="small" style="margin-bottom:6px">Punkt: x = ${fmtM(wx)} m, y = ${fmtM(wy)} m<br>Mõõtkava: ${scaleText}</div><table>`;
+  let html = `<div class="small" style="margin-bottom:6px">Punkt: x = ${fmtM(wx)} m, y = ${fmtM(wy)} m<br>Vektorite mõõtkava: ${scaleText}</div><table>`;
   if (P.length > 1){
     comps.forEach((f, i) => {
       const o = P[i];
@@ -963,7 +964,13 @@ $('optGrid').onchange = e => { opts.grid = e.target.checked; dirty(); };
 $('optChain').onchange = e => { opts.chain = e.target.checked; requestDraw(); };
 $('optSnap').onchange = e => { opts.snap = e.target.checked; };
 function updateFixedLabel(){ $('fixedVal').textContent = '100 px ≙ ' + fmtE(Math.pow(10, opts.fixedLog)); }
-$('scaleMode').onchange = e => { opts.scaleMode = e.target.value; $('fixedRow').style.display = opts.scaleMode === 'fixed' ? 'flex' : 'none'; requestDraw(); };
+const SCALE_EXPL = {
+  auto: 'Kursori igas asukohas valitakse mõõtkava uuesti nii, et pikim vektor (mõni E<sub>i</sub> või summaarne E) on 120 px pikk. Ühes punktis on kõik vektorid samas mõõtkavas – nende pikkuste suhe ja liitmine on õiged –, kuid noolte pikkusi eri punktide vahel võrrelda ei saa. Selles punktis kehtiv mõõtkava on näidatud allpool („Väli kursori kohas“).',
+  fixed: 'Mõõtkava on kogu joonisel sama: noole pikkus on võrdeline väljatugevusega E igas punktis, seega saab noolte pikkusi võrrelda ka eri punktide vahel (nt punktlaengu korral E ∝ 1/r²). Laengute lähedal võivad nooled joonisest välja ulatuda – sobiva mõõtkava saad valida liuguriga.'
+};
+function updateScaleExpl(){ $('scaleExpl').innerHTML = SCALE_EXPL[opts.scaleMode]; }
+$('scaleMode').onchange = e => { opts.scaleMode = e.target.value; $('fixedRow').style.display = opts.scaleMode === 'fixed' ? 'flex' : 'none'; updateScaleExpl(); requestDraw(); };
+updateScaleExpl();
 $('fixedScale').oninput = e => { opts.fixedLog = +e.target.value; updateFixedLabel(); requestDraw(); };
 updateFixedLabel();
 
