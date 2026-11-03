@@ -75,6 +75,13 @@
       <label>Langemisnurk α <input type="range" id="alpha" min="0" max="89.9" step="0.1" value="40"></label>
       <input type="number" id="alphaN" min="0" max="89.9" step="0.5" value="40"> <span class="unit">°</span>
     </div>
+    <div id="rowSide" style="margin-bottom:8px">
+      <div class="small" style="margin-bottom:4px">Valgusallikas asub</div>
+      <div class="types" style="grid-template-columns:1fr 1fr" id="sideBtns">
+        <button data-side="top">ülemises keskkonnas</button>
+        <button data-side="bottom">alumises keskkonnas</button>
+      </div>
+    </div>
     <div class="row" id="rowD">
       <label>Plaadi paksus d <input type="number" id="plateD" min="0.5" max="12" step="0.5" value="6"> <span class="unit">cm</span></label>
     </div>
@@ -85,7 +92,7 @@
     <h2>Kuva</h2>
     <label class="chk"><input type="checkbox" id="optAngles" checked> Ristsirged ja nurgad</label>
     <label class="chk"><input type="checkbox" id="optRefl" checked> Osaline peegeldus (heledus Fresneli valemite järgi)</label>
-    <label class="chk" id="rowCrit"><input type="checkbox" id="optCrit" checked> Piirnurk (kui n₁ &gt; n₂)</label>
+    <label class="chk" id="rowCrit"><input type="checkbox" id="optCrit" checked> Piirnurk (kui valgus läheb tihedamast keskkonnast hõredamasse)</label>
     <label class="chk"><input type="checkbox" id="optWhite"> Valge valgus (dispersioon)</label>
 
     <h2>Tulemused</h2>
@@ -93,7 +100,7 @@
 
     <h2>Kasutamine</h2>
     <div class="small">
-      • Langemisnurka muudad liuguriga või lohistades joonisel (laserit saab liigutada ümber tabamispunkti).<br>
+      • Langemisnurka muudad liuguriga või lohistades joonisel (laserit saab liigutada ümber tabamispunkti). Kahe keskkonna piiri korral saab valgusallika lohistada ka üle piiri teise keskkonda.<br>
       • Langemis- ja murdumisnurk mõõdetakse pinna ristsirgest (normaalist).<br>
       • Murdumisseadus: n₁·sin α = n₂·sin β.<br>
       • Kui valgus läheb optiliselt tihedamast keskkonnast hõredamasse (n₁ &gt; n₂), siis piirnurgast α<sub>p</sub> suurema langemisnurga korral murdunud kiirt ei teki – toimub täielik sisepeegeldus. sin α<sub>p</sub> = n₂/n₁.<br>
@@ -105,7 +112,7 @@
   </aside>
   <main id="main">
     <canvas id="cv"></canvas>
-    <div id="hint">Lohista joonisel, et muuta langemisnurka</div>
+    <div id="hint">Lohista valgusallikat, et muuta langemisnurka</div>
   </main>
 </div>
 
@@ -129,7 +136,7 @@ const LD = 0.5893;   // μm
 const WAVES = [700, 650, 600, 570, 530, 480, 440, 400];   // nm (valge valguse jaoks)
 
 const st = {
-  scene:'iface', alpha:40, d:6, phi:60, S:22,
+  scene:'iface', alpha:40, below:false, d:6, phi:60, S:22,
   angles:true, refl:true, crit:true, white:false,
   med: {   // iga stseeni keskkonnad: o – kust valgus tuleb (ümbritsev), i – teine keskkond / plaat / prisma
     iface: {o:{mat:'air', n:1.000}, i:{mat:'water', n:1.333}},
@@ -166,7 +173,7 @@ function wavelengthRGB(nm){
 // Tagastab: polügonid (keskkond 'i'), tabamispunkt Hp, välisnormaal nOut (pinnal, kuhu valgus langeb)
 function sceneGeom(){
   if (st.scene === 'iface'){
-    return {polys:[[[-300,0],[300,0],[300,-300],[-300,-300]]], Hp:[0,0], nOut:[0,1], L:13};
+    return {polys:[[[-300,0],[300,0],[300,-300],[-300,-300]]], Hp:[0,0], nOut: st.below ? [0,-1] : [0,1], L:13};
   }
   if (st.scene === 'plate'){
     const d = st.d, top = d/2;
@@ -242,7 +249,9 @@ function trace(origin, dir, lam, opts){
 }
 function sourceRay(){
   const g = sceneGeom();
-  const th = Math.atan2(g.nOut[1], g.nOut[0]) + st.alpha*DEG;      // allikas normaalist α võrra vastupäeva
+  // allikas on alati vasakul pool ristsirget: ülal vastupäeva, all päripäeva
+  const sgn = (st.scene === 'iface' && st.below) ? -1 : 1;
+  const th = Math.atan2(g.nOut[1], g.nOut[0]) + sgn*st.alpha*DEG;
   const S = [g.Hp[0] + g.L*Math.cos(th), g.Hp[1] + g.L*Math.sin(th)];
   const dx = g.Hp[0] - S[0], dy = g.Hp[1] - S[1], l = Math.hypot(dx, dy);
   return {g, S, dir:[dx/l, dy/l], th};
@@ -352,8 +361,9 @@ function draw(){
       line(X(ev.p[0] - ev.nrm[0]*L), Y(ev.p[1] - ev.nrm[1]*L), X(ev.p[0] + ev.nrm[0]*L), Y(ev.p[1] + ev.nrm[1]*L), '#64748b', 1.2, [6, 4]);
     });
   }
-  if (st.crit && st.scene === 'iface' && nO > nI){
-    const ac = Math.asin(nI/nO), th = Math.atan2(g.nOut[1], g.nOut[0]) + ac;
+  const nSrc = st.below ? nI : nO, nOth = st.below ? nO : nI;
+  if (st.crit && st.scene === 'iface' && nSrc > nOth){
+    const ac = Math.asin(nOth/nSrc), th = Math.atan2(g.nOut[1], g.nOut[0]) + (st.below ? -1 : 1)*ac;
     const P = [g.Hp[0] + 9*Math.cos(th), g.Hp[1] + 9*Math.sin(th)];
     line(X(g.Hp[0]), Y(g.Hp[1]), X(P[0]), Y(P[1]), '#a16207', 1.4, [3, 4]);
     label(X(P[0]) - 10, Y(P[1]) - 12, 'piirnurk ' + fmt(ac/DEG) + '°', '#a16207', 12);
@@ -399,16 +409,20 @@ function readout(res, g){
   const a = st.alpha;
   if (st.scene === 'iface'){
     const e = ev[0];
-    h += `<div>Langemisnurk <b>α = ${fmt(a)}°</b></div>`;
+    const src = st.below ? M.i : M.o, oth = st.below ? M.o : M.i;
+    const nm = m => matOf(m.mat).id === 'custom' ? 'keskkond' : matOf(m.mat).name;
+    h += `<div>Valgus läheb: <b>${nm(src)}</b> (n = ${fmt(src.n, 3)}) → <b>${nm(oth)}</b> (n = ${fmt(oth.n, 3)})</div>`;
+    h += `<div class="small">${src.n > oth.n ? 'optiliselt tihedamast keskkonnast hõredamasse: β > α' : (src.n < oth.n ? 'optiliselt hõredamast keskkonnast tihedamasse: β < α' : 'murdumisnäitajad on võrdsed: kiir ei murdu')}</div>`;
+    h += `<div style="margin-top:4px">Langemisnurk <b>α = ${fmt(a)}°</b></div>`;
     if (e && e.t !== null){
       h += `<div>Murdumisnurk <b>β = ${fmt(e.t/DEG)}°</b></div>`;
-      h += `<div class="small">n₁·sin α = ${fmt(nO*Math.sin(a*DEG), 4)}, n₂·sin β = ${fmt(nI*Math.sin(e.t), 4)}</div>`;
+      h += `<div class="small">n<sub>lang</sub>·sin α = ${fmt(src.n*Math.sin(a*DEG), 4)}, n<sub>murd</sub>·sin β = ${fmt(oth.n*Math.sin(e.t), 4)}</div>`;
       h += `<div>Peegeldub ${fmt(e.R*100)}%, läbib ${fmt((1 - e.R)*100)}%</div>`;
     } else if (e){
       h += `<div class="warn"><b>Täielik sisepeegeldus</b> – α on suurem kui piirnurk, murdunud kiirt ei teki.</div>`;
     }
-    if (nO > nI) h += `<div style="margin-top:4px">Piirnurk <b>α<sub>p</sub> = ${fmt(Math.asin(nI/nO)/DEG)}°</b> (sin α<sub>p</sub> = n₂/n₁)</div>`;
-    else h += `<div class="small" style="margin-top:4px">n₁ ≤ n₂: valgus läheb optiliselt tihedamasse keskkonda, täielikku sisepeegeldust ei toimu (β ≤ α).</div>`;
+    if (src.n > oth.n) h += `<div style="margin-top:4px">Piirnurk <b>α<sub>p</sub> = ${fmt(Math.asin(oth.n/src.n)/DEG)}°</b> (sin α<sub>p</sub> = ${fmt(oth.n, 3)}/${fmt(src.n, 3)})</div>`;
+    else h += `<div class="small" style="margin-top:4px">Täielikku sisepeegeldust ei toimu. Lohista valgusallikas teise keskkonda, et näha minekut tihedamast keskkonnast hõredamasse.</div>`;
   } else if (st.scene === 'plate'){
     const e1 = ev[0], e2 = ev[1];
     h += `<div>Langemisnurk <b>α = ${fmt(a)}°</b></div>`;
@@ -474,15 +488,21 @@ function syncUI(){
   $('matO').value = M.o.mat; $('matI').value = M.i.mat;
   $('nO').value = M.o.n; $('nI').value = M.i.n;
   $('nO').disabled = M.o.mat !== 'custom'; $('nI').disabled = M.i.mat !== 'custom';
-  const L = {iface:['Ülemine keskkond (valgus tuleb siit)', 'Alumine keskkond'], plate:['Ümbritsev keskkond', 'Plaadi materjal'], prism:['Ümbritsev keskkond', 'Prisma materjal']}[st.scene];
+  const L = {iface:['Ülemine keskkond', 'Alumine keskkond'], plate:['Ümbritsev keskkond', 'Plaadi materjal'], prism:['Ümbritsev keskkond', 'Prisma materjal']}[st.scene];
   $('lblO').textContent = L[0]; $('lblI').textContent = L[1];
   $('rowD').style.display = st.scene === 'plate' ? 'flex' : 'none';
   $('rowPhi').style.display = st.scene === 'prism' ? 'flex' : 'none';
   $('rowCrit').style.display = st.scene === 'iface' ? 'flex' : 'none';
+  $('rowSide').style.display = st.scene === 'iface' ? 'block' : 'none';
+  syncSide();
   $('alpha').value = st.alpha; $('alphaN').value = +st.alpha.toFixed(1);
   document.querySelectorAll('#scenes button').forEach(b => b.classList.toggle('on', b.dataset.s === st.scene));
 }
 document.querySelectorAll('#scenes button').forEach(b => b.onclick = () => { st.scene = b.dataset.s; syncUI(); draw(); });
+function syncSide(){
+  document.querySelectorAll('#sideBtns button').forEach(b => b.classList.toggle('on', (b.dataset.side === 'bottom') === st.below));
+}
+document.querySelectorAll('#sideBtns button').forEach(b => b.onclick = () => { st.below = b.dataset.side === 'bottom'; syncSide(); draw(); });
 function onMat(key, sel, inp){
   sel.onchange = () => {
     const m = st.med[st.scene][key], M = matOf(sel.value);
@@ -509,11 +529,14 @@ let dragging = false;
 function setAlphaFrom(e){
   const r = cv.getBoundingClientRect();
   const x = toX(e.clientX - r.left), y = toY(e.clientY - r.top);
+  if (st.scene === 'iface') st.below = y < 0;              // allika saab lohistada üle piiri
   const g = sceneGeom();
   const thN = Math.atan2(g.nOut[1], g.nOut[0]);
   let d = Math.atan2(y - g.Hp[1], x - g.Hp[0]) - thN;
   while (d > Math.PI) d -= 2*Math.PI; while (d < -Math.PI) d += 2*Math.PI;
+  if (st.scene === 'iface') d = Math.abs(d);              // allikas jääb ristsirgest vasakule
   st.alpha = Math.max(0, Math.min(89.9, Math.round(d/DEG*2)/2));
+  syncSide();
   $('alpha').value = st.alpha; $('alphaN').value = st.alpha;
   draw();
 }
