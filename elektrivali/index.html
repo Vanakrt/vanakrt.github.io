@@ -142,12 +142,12 @@
     <div class="row">
       <label>Vektorite mõõtkava
         <select id="scaleMode">
-          <option value="auto" selected>kohanduv (pikim vektor alati sama pikk)</option>
-          <option value="fixed">fikseeritud (pikkus ∝ E kogu joonisel)</option>
+          <option value="fixed" selected>fikseeritud (pikkus ∝ E kogu joonisel)</option>
+          <option value="auto">kohanduv (pikim vektor alati sama pikk)</option>
         </select>
       </label>
     </div>
-    <div class="row" id="fixedRow" style="display:none;margin-left:4px">
+    <div class="row" id="fixedRow" style="display:flex;margin-left:4px">
       <input type="range" id="fixedScale" min="2" max="7" step="0.1" value="4">
       <span class="small" id="fixedVal"></span>
     </div>
@@ -202,7 +202,7 @@ let autoLines = [], userLines = [];
 let linesDirty = true, drawPending = false;
 let hover = null;          // {x,y} pikslites
 let drag = null;
-const opts = { auto:true, density:16, grid:false, chain:true, snap:true, scaleMode:'auto', fixedLog:4,
+const opts = { auto:true, density:16, grid:false, chain:true, snap:true, scaleMode:'fixed', fixedLog:4,
                equi:false, equiFill:true, equiDensity:4 };
 const EQ_RES = 2;
 const EQ_N = 24;
