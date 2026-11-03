@@ -85,7 +85,11 @@
     <h2>Kiired</h2>
     <div id="rayList"></div>
     <div id="ptList"></div>
-    <label class="chk" id="helperRow" style="display:none"><input type="checkbox" id="optHelper" checked> <span class="sw" style="background:#d97706"></span> abikiir piki külge (teljel oleva tipu A kujutis)</label>
+    <div id="helperRow" style="display:none">
+      <div class="small" style="margin:4px 0">Teljel oleva tipu A kujutis:</div>
+      <label class="chk"><input type="checkbox" id="optSec" checked> <span class="sw" style="background:#0891b2"></span> kõrvaltelje meetod (suvaline kiir + kõrvaltelg + fookustasand)</label>
+      <label class="chk"><input type="checkbox" id="optHelper"> <span class="sw" style="background:#d97706"></span> abikiir piki kolmnurga külge</label>
+    </div>
     <label class="chk"><input type="checkbox" id="optFan"> Kiirtekimp eseme tipust (kõik kiired)</label>
     <label class="chk"><input type="checkbox" id="optDims" checked> Näita kaugusi d ja f</label>
     <label class="chk"><input type="checkbox" id="optSnap" checked> Joonda 0,5 cm sammuga</label>
@@ -102,6 +106,7 @@
       • Lohista noole tippu – muudad eseme kaugust ja kõrgust; noole alust lohistades muutub ainult kaugus.<br>
       • Mitmest punktist koosneva eseme kujutis konstrueeritakse punkt-punktilt: iga punkti kujutis on seal, kus sellest punktist lähtuvad kiired (või nende pikendused) lõikuvad.<br>
       • Peateljel oleva punkti kujutis on samuti peateljel, aga põhikiirtega seda leida ei saa. Abiks on kiir piki kolmnurga külge AB (või AC): see kiir läbib nii A kui ka B, seega murdunud kiir läbib nii B′ kui ka A′ – A′ on seal, kus see kiir lõikab peatelge.<br>
+      • <b>Kõrvaltelje meetod</b> teljel oleva punkti A jaoks: tõmba punktist A suvaline kiir läätseni. Tõmba sellega paralleelne kõrvaltelg läbi läätse optilise keskpunkti O (peegli korral läbi kõveruskeskpunkti C). Paralleelsed kiired koonduvad fookustasandil ühte punkti, seega läbib murdunud (peegeldunud) kiir punkti P, kus kõrvaltelg lõikab fookustasandit. Kus see kiir lõikab peatelge, seal on A′. Kiire tabamiskõrgust saab lohistada (sinine ring läätsel) – iga kiir annab sama A′. Hajutava läätse ja kumerpeegli korral läbib punkti P kiire pikendus.<br>
       • Esemeteljega risti olev ese (nool) annab sarnase kujutise. Kolmnurga punktid on läätsest erineval kaugusel ja suurenevad erinevalt, seetõttu ei ole kolmnurga kujutis esemega sarnane.<br>
       • Lohista fookust <b>F</b> – muudad fookuskaugust.<br>
       • Pidevjoon = tegelik kiir, kriipsjoon = kiire pikendus (näiv). Näiv kujutis on kriipsjoonega.<br>
@@ -127,7 +132,8 @@ const st = { type:'conv', F:10, d:25, h:4, obj:'arrow', fan:false, dims:true, sn
              rays:{1:true, 2:true, 3:true, 4:true},
              a2: {d:25, y1:-2, y2:4},                                  // nool läbi peatelje: saba y1, tipp y2
              tri: [{x:-27, y:0}, {x:-22, y:4}, {x:-19, y:1.5}],         // kolmnurk: A peateljel
-             pts: {A:true, B:true, C:true}, helper:true };
+             pts: {A:true, B:true, C:true}, helper:false, sec:true, secY:3 };
+const SEC_COLOR = '#0891b2';
 const HELPER_COLOR = '#d97706';
 const TYPES = {
   concave: {name:'Nõguspeegel', mirror:true,  sign: 1},
@@ -284,6 +290,7 @@ function drawRay(o, r, color, width, alpha, noArrows){
     const ix = X(o.imgX), iy = Y(o.hp);
     tEnd = Math.max(tEnd, ((ix - Hx)*ux + (iy - Hy)*uy) / (ul*ul));
     if (r.backAux !== undefined) tEnd = Math.max(tEnd, ((X(r.backAux) - Hx)*ux + (Y(0) - Hy)*uy) / (ul*ul));
+    if (r.backAuxPt) tEnd = Math.max(tEnd, ((X(r.backAuxPt[0]) - Hx)*ux + (Y(r.backAuxPt[1]) - Hy)*uy) / (ul*ul));
     tEnd *= 1.08;
     line(Sout[0], Sout[1], Hx + ux*tEnd, Hy + uy*tEnd, color, width*0.8, [5, 5]);
   }
@@ -425,6 +432,52 @@ function drawHelper(b, hr){
   const fake = Object.assign({}, hr.src, {d: -hr.start.x, h: hr.start.y});
   drawRay(fake, {id:'h', y: hr.y0, backAux: hr.backAux}, HELPER_COLOR, 1.8, 1);
 }
+// Ekraanipunkt, kus kõrvaltelje meetodi kiir tabab elementi (nõguspeegli korral kaarel)
+function secHitX(){
+  if (arcSg < 0){ const A = st.tri[0]; return hitArc(X(0), Y(st.secY), X(A.x) - X(0), Y(0) - Y(st.secY))[0]; }
+  return X(0);
+}
+// Kõrvaltelje meetod teljel oleva tipu A jaoks
+function drawSecondaryAxis(b){
+  const A = st.tri[0], dA = -A.x, y1 = st.secY;
+  const qA = imgPt(b, A.x, 0);
+  const u = y1 / dA;                                  // kiire tõus (cm/cm) liikumisel elemendi poole
+  const pivotX = b.mirror ? -2*b.Fs : 0;              // kõrvaltelg läbib O (lääts) või C (peegel)
+  const fpX = b.mirror ? -b.Fs : b.Fs;                // fookustasand (läätse taga / peegli ees; hajutaval elemendil teisel pool)
+  const P = [fpX, u * (fpX - pivotX)];                // kõrvaltelje ja fookustasandi lõikepunkt
+  ctx.save();
+  // fookustasand
+  line(X(fpX), 30, X(fpX), H - 10, '#64748b', 1.2, [8, 5]);
+  ctx.font = '12px system-ui, sans-serif'; ctx.fillStyle = '#64748b'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText('fookustasand', X(fpX), 34);
+  // kõrvaltelg: sirge läbi pivot-punkti tõusuga u üle kogu joonise
+  const xl = toX(0), xr = toX(W);
+  line(X(xl), Y(u*(xl - pivotX)), X(xr), Y(u*(xr - pivotX)), '#475569', 1.3, [12, 4, 2, 4]);
+  // silt joonise vasaku serva lähedale (kui seal joon on nähtav), muidu paremale
+  let lx = xl + 60/st.S, ly = u*(lx - pivotX);
+  if (Y(ly) < 40 || Y(ly) > H - 20){ lx = xr - 60/st.S; ly = u*(lx - pivotX); }
+  label(X(lx), Y(ly) - 12, 'kõrvaltelg', '#475569');
+  if (b.mirror){ ctx.fillStyle = '#7c3aed'; ctx.beginPath(); ctx.arc(X(pivotX), Y(0), 4, 0, 2*Math.PI); ctx.fill(); }
+  else { label(X(0) - 10, Y(0) + 14, 'O', '#475569'); }
+  ctx.restore();
+  // kiir A-st elemendini ja edasi (väljuv siht A′ kaudu); näiva korral pikendus kuni P-ni
+  const pseudo = Object.assign({}, qA, {d: dA, h: 0});
+  if (!qA.inf) drawRay(pseudo, {id:'s', y: y1, backAuxPt: P}, SEC_COLOR, 2, 1);
+  else {
+    // A on fookuses: väljuv kiir on paralleelne kõrvalteljega
+    const Hx = secHitX(), Hy = Y(y1);
+    line(X(A.x), Y(0), Hx, Hy, SEC_COLOR, 2);
+    const [Ex, Ey] = toEdge(Hx, Hy, (b.mirror ? -1 : 1)*st.S, -u*st.S*(b.mirror ? -1 : 1));
+    line(Hx, Hy, Ex, Ey, SEC_COLOR, 2);
+  }
+  // punkt P
+  ctx.save(); ctx.fillStyle = '#0f172a'; ctx.beginPath(); ctx.arc(X(P[0]), Y(P[1]), 4.5, 0, 2*Math.PI); ctx.fill(); ctx.restore();
+  label(X(P[0]) + 12, Y(P[1]) - 12, 'P', '#0f172a');
+  // lohistatav käepide tabamispunktis
+  const hx = secHitX();
+  ctx.save(); ctx.beginPath(); ctx.arc(hx, Y(y1), hover && hover.what === 'sec' ? 8 : 6, 0, 2*Math.PI);
+  ctx.strokeStyle = SEC_COLOR; ctx.lineWidth = 2; ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.fill(); ctx.stroke(); ctx.restore();
+}
 function drawPolyImage(b, pts, closed){
   // eseme murdjoone kujutis punkt-punktilt; katkestus fookustasandi ületamisel
   const N = 120, segs = [];
@@ -480,7 +533,8 @@ function draw(){
   const hr = helperRay(b);
   // elemendi ava: katab kiirte tabamiskõrgused
   const maxCm = (H/2 - 40) / st.S;
-  const ys = [].concat(...raySets.map(rs => rs.R.map(r => r.y)), KP.map(k => k.y), hr ? [hr.y0] : []);
+  const secOn = st.obj === 'triangle' && st.sec;
+  const ys = [].concat(...raySets.map(rs => rs.R.map(r => r.y)), KP.map(k => k.y), hr ? [hr.y0] : [], secOn ? [st.secY] : []);
   let A = Math.max(6, ...ys.map(y => Math.abs(y)*1.12 + 0.5), ...KP.map(k => Math.abs(k.y)*1.4));
   A = Math.min(A, maxCm);
   drawElement(b, A);
@@ -504,6 +558,7 @@ function draw(){
   }
   for (const rs of raySets) for (const r of rs.R) drawRay(rs.o, r, RAY_COLORS[r.id], 1.8, 1);
   if (hr) drawHelper(b, hr);
+  if (secOn) drawSecondaryAxis(b);
 
   // ese ja kujutis
   if (st.obj === 'arrow' || st.obj === 'candle'){
@@ -638,7 +693,7 @@ function renderPtList(){
   const KP = keyPoints().filter(k => Math.abs(k.y) > 1e-9 || st.obj !== 'triangle');
   $('dhRows').style.display = multi() ? 'none' : 'block';
   $('ptNote').style.display = multi() ? 'block' : 'none';
-  $('helperRow').style.display = st.obj === 'triangle' ? 'flex' : 'none';
+  $('helperRow').style.display = st.obj === 'triangle' ? 'block' : 'none';
   $('ptList').innerHTML = !multi() ? '' : '<div class="small" style="margin:4px 0">Põhikiired punktidest:</div><div class="row">' +
     keyPoints().filter(k => !(st.obj === 'triangle' && k.name === 'A')).map(k =>
       `<label class="chk" style="margin:0 8px 0 0"><input type="checkbox" data-pt="${k.name}" ${st.pts[k.name] ? 'checked' : ''}> ${k.name}</label>`).join('') + '</div>';
@@ -646,6 +701,7 @@ function renderPtList(){
 }
 $('objType').onchange = e => { st.obj = e.target.value; renderPtList(); updateHint(); draw(); };
 $('optHelper').onchange = e => { st.helper = e.target.checked; draw(); };
+$('optSec').onchange = e => { st.sec = e.target.checked; draw(); };
 function updateHint(){
   $('hint').textContent = multi() ? 'Lohista eseme punkte või fookust F' : 'Lohista eset või fookust F';
 }
@@ -660,6 +716,9 @@ function hitTest(p){
   const b = base();
   if (multi()){
     for (const k of keyPoints()) if (Math.hypot(p.x - X(k.x), p.y - Y(k.y)) < 12) return {what:'pt', name:k.name};
+    if (st.obj === 'triangle' && st.sec){
+      const hx = secHitX(); if (Math.hypot(p.x - hx, p.y - Y(st.secY)) < 11) return {what:'sec'};
+    }
   } else {
     if (Math.hypot(p.x - X(-st.d), p.y - Y(st.h)) < 12) return {what:'tip'};
   }
@@ -692,7 +751,9 @@ cv.addEventListener('pointermove', e => {
   const p = evPos(e);
   if (drag){
     const x = toX(p.x), y = toY(p.y);
-    if (drag.what === 'pt'){
+    if (drag.what === 'sec'){
+      const v = snapv(y); if (Math.abs(v) >= 0.5) st.secY = v;
+    } else if (drag.what === 'pt'){
       dragPoint(drag.name, x, y);
     } else if (drag.what === 'tip' || drag.what === 'base'){
       const d = snapv(-x);
@@ -709,7 +770,7 @@ cv.addEventListener('pointermove', e => {
   }
   const h = hitTest(p);
   hover = h;
-  cv.style.cursor = h ? (h.what === 'base' ? 'ew-resize' : (h.what === 'pt' && st.obj === 'triangle' && h.name === 'A' ? 'ew-resize' : 'grab')) : 'default';
+  cv.style.cursor = h ? (h.what === 'base' ? 'ew-resize' : (h.what === 'sec' ? 'ns-resize' : (h.what === 'pt' && st.obj === 'triangle' && h.name === 'A' ? 'ew-resize' : 'grab'))) : 'default';
   draw();
 });
 const end = () => { if (drag){ drag = null; cv.style.cursor = 'grab'; draw(); } };
@@ -726,7 +787,7 @@ function resize(){
 new ResizeObserver(resize).observe(main);
 if (/github\.io$/.test(location.hostname)) $('back').style.display = 'block';
 renderRayList(); renderPtList(); syncInputs(); resize();
-window.__op = {st, optics, imgPt, base, keyPoints, helperRay, rayDefs, outDir, draw, renderPtList};
+window.__op = {st, optics, imgPt, base, keyPoints, helperRay, rayDefs, outDir, draw, renderPtList, toX, toY, X, Y};
 </script>
 </body>
 </html>
