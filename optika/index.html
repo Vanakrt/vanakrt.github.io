@@ -63,22 +63,29 @@
       <label>Fookuskaugus |F| <input type="number" id="inF" min="1" step="0.5" value="10"> <span class="unit">cm</span></label>
     </div>
     <div class="row">
-      <label>Eseme kaugus d <input type="number" id="inD" min="0.5" step="0.5" value="25"> <span class="unit">cm</span></label>
-    </div>
-    <div class="row">
-      <label>Eseme kõrgus h <input type="number" id="inH" step="0.5" value="4"> <span class="unit">cm</span></label>
-    </div>
-    <div class="row">
       <label>Ese
         <select id="objType">
-          <option value="arrow" selected>nool</option>
+          <option value="arrow" selected>nool peateljelt</option>
           <option value="candle">küünal</option>
+          <option value="arrow2">nool läbi peatelje</option>
+          <option value="triangle">kolmnurk (tipp peateljel)</option>
         </select>
       </label>
     </div>
+    <div id="dhRows">
+      <div class="row">
+        <label>Eseme kaugus d <input type="number" id="inD" min="0.5" step="0.5" value="25"> <span class="unit">cm</span></label>
+      </div>
+      <div class="row">
+        <label>Eseme kõrgus h <input type="number" id="inH" step="0.5" value="4"> <span class="unit">cm</span></label>
+      </div>
+    </div>
+    <div id="ptNote" class="small" style="display:none;margin-bottom:8px">Lohista joonisel eseme punkte (ringid). Kolmnurga tipp A liigub ainult mööda peatelge.</div>
 
     <h2>Kiired</h2>
     <div id="rayList"></div>
+    <div id="ptList"></div>
+    <label class="chk" id="helperRow" style="display:none"><input type="checkbox" id="optHelper" checked> <span class="sw" style="background:#d97706"></span> abikiir piki külge (teljel oleva tipu A kujutis)</label>
     <label class="chk"><input type="checkbox" id="optFan"> Kiirtekimp eseme tipust (kõik kiired)</label>
     <label class="chk"><input type="checkbox" id="optDims" checked> Näita kaugusi d ja f</label>
     <label class="chk"><input type="checkbox" id="optSnap" checked> Joonda 0,5 cm sammuga</label>
@@ -93,6 +100,9 @@
     <h2>Kasutamine</h2>
     <div class="small">
       • Lohista noole tippu – muudad eseme kaugust ja kõrgust; noole alust lohistades muutub ainult kaugus.<br>
+      • Mitmest punktist koosneva eseme kujutis konstrueeritakse punkt-punktilt: iga punkti kujutis on seal, kus sellest punktist lähtuvad kiired (või nende pikendused) lõikuvad.<br>
+      • Peateljel oleva punkti kujutis on samuti peateljel, aga põhikiirtega seda leida ei saa. Abiks on kiir piki kolmnurga külge AB (või AC): see kiir läbib nii A kui ka B, seega murdunud kiir läbib nii B′ kui ka A′ – A′ on seal, kus see kiir lõikab peatelge.<br>
+      • Esemeteljega risti olev ese (nool) annab sarnase kujutise. Kolmnurga punktid on läätsest erineval kaugusel ja suurenevad erinevalt, seetõttu ei ole kolmnurga kujutis esemega sarnane.<br>
       • Lohista fookust <b>F</b> – muudad fookuskaugust.<br>
       • Pidevjoon = tegelik kiir, kriipsjoon = kiire pikendus (näiv). Näiv kujutis on kriipsjoonega.<br>
       • Joonis on paraksiaalses lähenduses: peegel ja lääts on kujutatud tasandina, millel kiir murdub või peegeldub (nagu õpikujoonistel).<br>
@@ -114,7 +124,11 @@ const main = $('main'), cv = $('cv'), ctx = cv.getContext('2d');
 let W = 0, H = 0, DPR = 1;
 
 const st = { type:'conv', F:10, d:25, h:4, obj:'arrow', fan:false, dims:true, snap:true, S:18,
-             rays:{1:true, 2:true, 3:true, 4:true} };
+             rays:{1:true, 2:true, 3:true, 4:true},
+             a2: {d:25, y1:-2, y2:4},                                  // nool läbi peatelje: saba y1, tipp y2
+             tri: [{x:-27, y:0}, {x:-22, y:4}, {x:-19, y:1.5}],         // kolmnurk: A peateljel
+             pts: {A:true, B:true, C:true}, helper:true };
+const HELPER_COLOR = '#d97706';
 const TYPES = {
   concave: {name:'Nõguspeegel', mirror:true,  sign: 1},
   convex:  {name:'Kumerpeegel', mirror:true,  sign:-1},
@@ -161,15 +175,27 @@ const snapv = v => st.snap ? Math.round(v * 2) / 2 : v;
 /* ---------- optika ---------- */
 // Arvutus "läätse raamistikus": valgus tuleb vasakult, element x = 0 juures.
 // Peegli korral peegeldatakse väljuvate kiirte x-suund (x → −x).
-function optics(){
+function base(){
   const T = TYPES[st.type];
-  const Fs = T.sign * st.F, d = st.d, h = st.h;
+  return {T, Fs: T.sign * st.F, mirror: T.mirror};
+}
+// Punkti (x < 0, y) kujutis. Tagastab objekti, mida kasutavad kiirte funktsioonid.
+function imgPt(b, x, y){
+  const d = -x, h = y, Fs = b.Fs;
   const inf = Math.abs(d - Fs) < 1e-9;
   let f = null, hp = null;
   if (!inf){ f = d * Fs / (d - Fs); hp = -h * f / d; }
-  const imgX = inf ? null : (T.mirror ? -f : f);
-  return {T, Fs, d, h, f, hp, inf, imgX, mirror: T.mirror, real: !inf && f > 0};
+  const imgX = inf ? null : (b.mirror ? -f : f);
+  return {T: b.T, Fs, d, h, f, hp, inf, imgX, mirror: b.mirror, real: !inf && f > 0};
 }
+function optics(){ return imgPt(base(), -st.d, st.h); }
+// Eseme iseloomulikud punktid
+function keyPoints(){
+  if (st.obj === 'arrow2') return [{name:'A', x:-st.a2.d, y:st.a2.y1}, {name:'B', x:-st.a2.d, y:st.a2.y2}];
+  if (st.obj === 'triangle') return st.tri.map((p, i) => ({name:'ABC'[i], x:p.x, y:p.y}));
+  return [{name:'', x:-st.d, y:st.h}];
+}
+const multi = () => st.obj === 'arrow2' || st.obj === 'triangle';
 // Kiir eseme tipust, mis tabab elementi kõrgusel y. Tagastab väljuva suuna (pikslites arvutamiseks cm-des).
 function outDir(o, y){
   let dx, dy;
@@ -374,54 +400,157 @@ function dimension(x1cm, x2cm, ycm, text, color){
   ctx.restore();
 }
 
+// Teljel oleva tipu abikiir piki kolmnurga külge (valitakse külg, mis tabab elementi madalamal)
+function helperRay(b){
+  if (st.obj !== 'triangle' || !st.helper) return null;
+  const A = st.tri[0];
+  let best = null;
+  for (const P of [st.tri[1], st.tri[2]]){
+    if (Math.abs(P.x - A.x) < 1e-9 || Math.abs(P.y) < 1e-9) continue;
+    const y0 = P.y * (0 - A.x) / (P.x - A.x);       // sirge AP lõikekõrgus elemendi tasandil
+    if (!best || Math.abs(y0) < Math.abs(best.y0)) best = {P, y0};
+  }
+  if (!best) return null;
+  // kiir lähtub kaugemast punktist ja läbib teise
+  let S = best.P.x < A.x ? best.P : A, Q = S === A ? best.P : A;
+  let src = imgPt(b, S.x, S.y);
+  if (src.inf) src = imgPt(b, Q.x, Q.y);
+  if (src.inf) return null;
+  // kiir peab tõesti lähtuma src punktist: kui src on Q, alustame siiski S-ist (sama sirge)
+  const Aimg = imgPt(b, A.x, 0);
+  return {src, start: S, y0: best.y0, backAux: Aimg.inf ? undefined : Aimg.imgX};
+}
+function drawHelper(b, hr){
+  // joonistame kiire S → (0,y0) ja edasi; väljuv siht määratakse src kujutise järgi
+  const fake = Object.assign({}, hr.src, {d: -hr.start.x, h: hr.start.y});
+  drawRay(fake, {id:'h', y: hr.y0, backAux: hr.backAux}, HELPER_COLOR, 1.8, 1);
+}
+function drawPolyImage(b, pts, closed){
+  // eseme murdjoone kujutis punkt-punktilt; katkestus fookustasandi ületamisel
+  const N = 120, segs = [];
+  const n = closed ? pts.length : pts.length - 1;
+  for (let e = 0; e < n; e++){
+    const p0 = pts[e], p1 = pts[(e + 1) % pts.length];
+    let prev = null;
+    for (let k = 0; k <= N; k++){
+      const t = k / N, x = p0.x + (p1.x - p0.x)*t, y = p0.y + (p1.y - p0.y)*t;
+      const q = imgPt(b, x, y);
+      const side = Math.sign(-x - b.Fs);
+      if (prev && !q.inf && !prev.q.inf && side === prev.side){
+        segs.push({x1: X(prev.q.imgX), y1: Y(prev.q.hp), x2: X(q.imgX), y2: Y(q.hp), real: q.real});
+      }
+      prev = {q, side};
+    }
+  }
+  ctx.save();
+  // täide, kui kõik tipud on fookustasandi samal poolel
+  const im = pts.map(p => imgPt(b, p.x, p.y));
+  const sides = pts.map(p => Math.sign(-p.x - b.Fs));
+  if (closed && im.every(q => !q.inf) && sides.every(v => v === sides[0])){
+    ctx.fillStyle = im[0].real ? 'rgba(234,88,12,0.18)' : 'rgba(234,88,12,0.08)';
+    ctx.beginPath(); im.forEach((q, i) => i ? ctx.lineTo(X(q.imgX), Y(q.hp)) : ctx.moveTo(X(q.imgX), Y(q.hp))); ctx.closePath(); ctx.fill();
+  }
+  for (const sg of segs){
+    ctx.strokeStyle = IMG_COLOR; ctx.lineWidth = 2.6; ctx.lineCap = 'round';
+    ctx.setLineDash(sg.real ? [] : [6, 4]);
+    ctx.beginPath(); ctx.moveTo(sg.x1, sg.y1); ctx.lineTo(sg.x2, sg.y2); ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawPoly(pts, color, fill){
+  ctx.save(); ctx.fillStyle = fill; ctx.strokeStyle = color; ctx.lineWidth = 2.6; ctx.lineJoin = 'round';
+  ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(X(p.x), Y(p.y)) : ctx.moveTo(X(p.x), Y(p.y))); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+function arrowBetween(x1, y1, x2, y2, color, dashed){
+  const L = Math.hypot(x2 - x1, y2 - y1); if (L < 2) return;
+  const ux = (x2 - x1)/L, uy = (y2 - y1)/L;
+  line(x1, y1, x2 - ux*8, y2 - uy*8, color, 3, dashed ? [6, 4] : null);
+  head(x2 - ux*5, y2 - uy*5, ux, uy, 16, color);
+}
+
 function draw(){
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   drawAxis();
-  const o = optics();
-  const R = rayDefs(o).filter(r => st.rays[r.id]);
+  const b = base();
+  const KP = keyPoints();
+  // kiired: iga valitud teljeväline punkt
+  const rayPts = KP.filter(k => Math.abs(k.y) > 1e-9 && (!multi() || st.pts[k.name]));
+  const raySets = rayPts.map(k => { const o = imgPt(b, k.x, k.y); return {k, o, R: rayDefs(o).filter(r => st.rays[r.id])}; });
+  const hr = helperRay(b);
   // elemendi ava: katab kiirte tabamiskõrgused
   const maxCm = (H/2 - 40) / st.S;
-  let A = Math.max(6, Math.abs(st.h)*1.4, ...R.map(r => Math.abs(r.y)*1.12 + 0.5));
+  const ys = [].concat(...raySets.map(rs => rs.R.map(r => r.y)), KP.map(k => k.y), hr ? [hr.y0] : []);
+  let A = Math.max(6, ...ys.map(y => Math.abs(y)*1.12 + 0.5), ...KP.map(k => Math.abs(k.y)*1.4));
   A = Math.min(A, maxCm);
-  drawElement(o, A);
+  drawElement(b, A);
   // fookused ja kõveruskeskpunktid
   const Fa = st.F;
-  if (o.mirror){
-    const sideF = -o.Fs, sideC = -2*o.Fs;
-    marker(sideF, 'F', '#b91c1c', true);
-    marker(sideC, 'C', '#7c3aed', false);
+  if (b.mirror){
+    marker(-b.Fs, 'F', '#b91c1c', true);
+    marker(-2*b.Fs, 'C', '#7c3aed', false);
   } else {
     marker(-Fa, 'F', '#b91c1c', true); marker(Fa, 'F', '#b91c1c', true);
     marker(-2*Fa, '2F', '#64748b', false); marker(2*Fa, '2F', '#64748b', false);
   }
-  // kiirtekimp
-  if (st.fan){
-    const N = 13;
+  // kiirtekimp (esimesest teljevälisest punktist)
+  const fanPt = KP.find(k => Math.abs(k.y) > 1e-9);
+  if (st.fan && fanPt){
+    const o = imgPt(b, fanPt.x, fanPt.y), N = 13;
     for (let k = 0; k < N; k++){
       const y = -A*0.95 + 2*A*0.95*k/(N - 1);
       drawRay(o, {id:0, y}, '#94a3b8', 1, 0.6, true);
     }
   }
-  for (const r of R) drawRay(o, r, RAY_COLORS[r.id], 1.8, 1);
+  for (const rs of raySets) for (const r of rs.R) drawRay(rs.o, r, RAY_COLORS[r.id], 1.8, 1);
+  if (hr) drawHelper(b, hr);
+
   // ese ja kujutis
-  drawArrowObj(-st.d, st.h, OBJ_COLOR, false, false);
-  label(X(-st.d), Y(st.h) + (st.h >= 0 ? -16 : 16), 'ese', OBJ_COLOR);
-  if (!o.inf){
-    drawArrowObj(o.imgX, o.hp, IMG_COLOR, !o.real, true);
-    const lx = X(o.imgX), ly = Y(o.hp) + (o.hp >= 0 ? -16 : 16);
-    if (lx > 0 && lx < W) label(lx, ly, o.real ? 'kujutis' : 'näiv kujutis', IMG_COLOR);
-  }
-  if (st.dims){
-    const yd = -Math.min(A + 2.2, (H/2 - 70) / st.S);
-    dimension(-st.d, 0, yd, 'd = ' + fmt(st.d) + ' cm', OBJ_COLOR);
+  if (st.obj === 'arrow' || st.obj === 'candle'){
+    const o = imgPt(b, -st.d, st.h);
+    drawArrowObj(-st.d, st.h, OBJ_COLOR, false, false);
+    label(X(-st.d), Y(st.h) + (st.h >= 0 ? -16 : 16), 'ese', OBJ_COLOR);
     if (!o.inf){
-      const yf = o.imgX < 0 ? yd - 2.2 : yd;   // kui kujutis on esemega samal pool, joonista madalamale
-      dimension(0, o.imgX, yf, 'f = ' + fmt(o.f) + ' cm', IMG_COLOR);
+      drawArrowObj(o.imgX, o.hp, IMG_COLOR, !o.real, true);
+      const lx = X(o.imgX), ly = Y(o.hp) + (o.hp >= 0 ? -16 : 16);
+      if (lx > 0 && lx < W) label(lx, ly, o.real ? 'kujutis' : 'näiv kujutis', IMG_COLOR);
+    }
+    if (st.dims){
+      const yd = -Math.min(A + 2.2, (H/2 - 70) / st.S);
+      dimension(-st.d, 0, yd, 'd = ' + fmt(st.d) + ' cm', OBJ_COLOR);
+      if (!o.inf){
+        const yf = o.imgX < 0 ? yd - 2.2 : yd;
+        dimension(0, o.imgX, yf, 'f = ' + fmt(o.f) + ' cm', IMG_COLOR);
+      }
+    }
+    handle(X(-st.d), Y(st.h), hover && hover.what === 'tip');
+  } else {
+    if (st.obj === 'arrow2'){
+      const [Pa, Pb] = KP;
+      arrowBetween(X(Pa.x), Y(Pa.y), X(Pb.x), Y(Pb.y), OBJ_COLOR, false);
+      const qa = imgPt(b, Pa.x, Pa.y), qb = imgPt(b, Pb.x, Pb.y);
+      if (!qa.inf) arrowBetween(X(qa.imgX), Y(qa.hp), X(qb.imgX), Y(qb.hp), IMG_COLOR, !qa.real);
+    } else {
+      drawPoly(KP, OBJ_COLOR, 'rgba(15,118,110,0.15)');
+      drawPolyImage(b, KP, true);
+    }
+    // punktide nimed ja kujutised
+    const cx = KP.reduce((a, k) => a + k.x, 0) / KP.length, cy = KP.reduce((a, k) => a + k.y, 0) / KP.length;
+    for (const k of KP){
+      const q = imgPt(b, k.x, k.y);
+      const ox = X(k.x) + (k.x < cx ? -14 : 14), oy = Y(k.y) + (k.y > cy || k.y === 0 && cy < 0 ? -14 : 14);
+      label(ox, oy, k.name, OBJ_COLOR);
+      if (!q.inf){
+        const ix = X(q.imgX), iy = Y(q.hp);
+        if (Math.abs(k.y) < 1e-9){ ctx.save(); ctx.fillStyle = IMG_COLOR; ctx.beginPath(); ctx.arc(ix, iy, 4.5, 0, 2*Math.PI); ctx.fill(); ctx.restore(); }
+        const qcx = imgPt(b, cx, cy);
+        const lx = ix + (qcx.inf ? 14 : (q.imgX < qcx.imgX ? -16 : 16)), ly = iy + (qcx.inf ? -14 : (q.hp > qcx.hp || (Math.abs(q.hp) < 1e-9 && qcx.hp < 0) ? -14 : 14));
+        if (ix > -20 && ix < W + 20) label(lx, ly, k.name + '′', IMG_COLOR);
+      }
+      handle(X(k.x), Y(k.y), hover && hover.what === 'pt' && hover.name === k.name);
     }
   }
-  // tippude käepidemed
-  handle(X(-st.d), Y(st.h), hover && hover.what === 'tip');
-  readout(o);
+  readout(b, KP);
 }
 function handle(x, y, active){
   ctx.save(); ctx.beginPath(); ctx.arc(x, y, active ? 8 : 6, 0, 2*Math.PI);
@@ -433,27 +562,53 @@ function label(x, y, text, color){
   ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.strokeText(text, x, y);
   ctx.fillStyle = color; ctx.fillText(text, x, y); ctx.restore();
 }
-function readout(o){
-  const D = 100 / o.Fs;
-  let html = `<div>Fookuskaugus <b>F = ${fmt(o.Fs)} cm</b>, optiline tugevus <b>D = ${fmt(D, 2)} dptr</b></div>`;
-  html += `<div>Eseme kaugus <b>d = ${fmt(st.d)} cm</b>, kõrgus <b>h = ${fmt(Math.abs(st.h))} cm</b></div>`;
-  if (o.inf){
-    html += `<div style="margin-top:6px"><b>Ese on fookuses</b>: kiired väljuvad paralleelselt ega lõiku – kujutist ei teki (kujutis on lõpmatuses).</div>`;
+function readout(b, KP){
+  const D = 100 / b.Fs;
+  let html = `<div>Fookuskaugus <b>F = ${fmt(b.Fs)} cm</b>, optiline tugevus <b>D = ${fmt(D, 2)} dptr</b></div>`;
+  if (!multi()){
+    const o = imgPt(b, -st.d, st.h);
+    html += `<div>Eseme kaugus <b>d = ${fmt(st.d)} cm</b>, kõrgus <b>h = ${fmt(Math.abs(st.h))} cm</b></div>`;
+    if (o.inf){
+      html += `<div style="margin-top:6px"><b>Ese on fookuses</b>: kiired väljuvad paralleelselt ega lõiku – kujutist ei teki (kujutis on lõpmatuses).</div>`;
+    } else {
+      const G = Math.abs(o.f) / st.d;
+      html += `<div>Kujutise kaugus <b>f = ${fmt(o.f)} cm</b></div>`;
+      html += `<div>Suurendus <b>Γ = ${fmt(G, 2)}</b>, kujutise kõrgus <b>H = ${fmt(Math.abs(o.hp))} cm</b></div>`;
+      html += tagsHtml(o, st.h, G);
+      const ix = X(o.imgX), iy = Y(o.hp);
+      if (ix < 0 || ix > W || iy < 0 || iy > H) html += `<div class="small" style="margin-top:4px">Kujutis jääb joonisest välja – vähenda suurendust.</div>`;
+      html += sideHtml(o);
+    }
   } else {
-    const G = Math.abs(o.f) / st.d;
-    html += `<div>Kujutise kaugus <b>f = ${fmt(o.f)} cm</b></div>`;
-    html += `<div>Suurendus <b>Γ = ${fmt(G, 2)}</b>, kujutise kõrgus <b>H = ${fmt(Math.abs(o.hp))} cm</b></div>`;
-    const tags = [];
-    tags.push(o.real ? 'tõeline' : 'näiv');
-    tags.push(o.hp * st.h < 0 ? 'pööratud' : 'päris (püsti)');
-    tags.push(Math.abs(G - 1) < 0.005 ? 'sama suur' : (G > 1 ? 'suurendatud' : 'vähendatud'));
-    html += `<div style="margin-top:4px">${tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>`;
-    const ix = X(o.imgX), iy = Y(o.hp);
-    if (ix < 0 || ix > W || iy < 0 || iy > H) html += `<div class="small" style="margin-top:4px">Kujutis jääb joonisest välja – vähenda suurendust.</div>`;
-    const side = o.mirror ? (o.real ? 'peegli ees' : 'peegli taga') : (o.real ? 'läätse taga (teisel pool)' : 'läätse ees (esemega samal pool)');
-    html += `<div class="small" style="margin-top:2px">Kujutis asub ${side}.</div>`;
+    html += `<table style="width:100%;border-collapse:collapse;margin-top:6px;font-size:12.5px"><tr style="color:#6b7280"><td>punkt</td><td>d</td><td>y</td><td>f</td><td>y′</td></tr>`;
+    for (const k of KP){
+      const q = imgPt(b, k.x, k.y);
+      html += `<tr><td><b>${k.name}</b> → ${k.name}′</td><td>${fmt(-k.x)}</td><td>${fmt(k.y)}</td><td>${q.inf ? '∞' : fmt(q.f)}</td><td>${q.inf ? '–' : fmt(q.hp)}</td></tr>`;
+    }
+    html += `</table><div class="small">Kõik suurused sentimeetrites; y – punkti kõrgus peatelje suhtes.</div>`;
+    if (st.obj === 'arrow2'){
+      const q = imgPt(b, -st.a2.d, st.a2.y1);
+      if (q.inf) html += `<div style="margin-top:6px"><b>Ese on fookuses</b> – kujutist ei teki.</div>`;
+      else { const G = Math.abs(q.f) / st.a2.d; html += `<div style="margin-top:4px">Suurendus <b>Γ = ${fmt(G, 2)}</b></div>` + tagsHtml(q, 1, G) + sideHtml(q); }
+    } else {
+      const im = KP.map(k => imgPt(b, k.x, k.y));
+      const sides = KP.map(k => Math.sign(-k.x - b.Fs));
+      if (im.some(q => q.inf) || !sides.every(v => v === sides[0]))
+        html += `<div style="margin-top:6px">Kolmnurk ulatub üle fookustasandi: selle osa kujutis läheb lõpmatusse ning kujutis koosneb tõelisest ja näivast osast.</div>`;
+      else html += `<div style="margin-top:4px">${tagsHtml(im[0], 1, null)}</div><div class="small">Kujutis ei ole esemega sarnane – tipud on läätsest erineval kaugusel ja nende suurendus on erinev.</div>`;
+    }
   }
   $('readout').innerHTML = html;
+}
+function tagsHtml(o, hSign, G){
+  // tõelise eseme korral on kujutis pööratud parajasti siis, kui see on tõeline
+  const tags = [o.real ? 'tõeline' : 'näiv', o.real ? 'pööratud' : 'päris (püsti)'];
+  if (G !== null) tags.push(Math.abs(G - 1) < 0.005 ? 'sama suur' : (G > 1 ? 'suurendatud' : 'vähendatud'));
+  return `<div style="margin-top:4px">${tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>`;
+}
+function sideHtml(o){
+  const side = o.mirror ? (o.real ? 'peegli ees' : 'peegli taga') : (o.real ? 'läätse taga (teisel pool)' : 'läätse ees (esemega samal pool)');
+  return `<div class="small" style="margin-top:2px">Kujutis asub ${side}.</div>`;
 }
 
 /* ---------- juhtelemendid ---------- */
@@ -479,7 +634,21 @@ const numIn = (id, key, min, allowNeg) => $(id).oninput = e => {
   st[key] = v; draw();
 };
 numIn('inF', 'F', 1, false); numIn('inD', 'd', 0.5, false); numIn('inH', 'h', 0, true);
-$('objType').onchange = e => { st.obj = e.target.value; draw(); };
+function renderPtList(){
+  const KP = keyPoints().filter(k => Math.abs(k.y) > 1e-9 || st.obj !== 'triangle');
+  $('dhRows').style.display = multi() ? 'none' : 'block';
+  $('ptNote').style.display = multi() ? 'block' : 'none';
+  $('helperRow').style.display = st.obj === 'triangle' ? 'flex' : 'none';
+  $('ptList').innerHTML = !multi() ? '' : '<div class="small" style="margin:4px 0">Põhikiired punktidest:</div><div class="row">' +
+    keyPoints().filter(k => !(st.obj === 'triangle' && k.name === 'A')).map(k =>
+      `<label class="chk" style="margin:0 8px 0 0"><input type="checkbox" data-pt="${k.name}" ${st.pts[k.name] ? 'checked' : ''}> ${k.name}</label>`).join('') + '</div>';
+  document.querySelectorAll('[data-pt]').forEach(cb => cb.onchange = e => { st.pts[e.target.dataset.pt] = e.target.checked; draw(); });
+}
+$('objType').onchange = e => { st.obj = e.target.value; renderPtList(); updateHint(); draw(); };
+$('optHelper').onchange = e => { st.helper = e.target.checked; draw(); };
+function updateHint(){
+  $('hint').textContent = multi() ? 'Lohista eseme punkte või fookust F' : 'Lohista eset või fookust F';
+}
 $('optFan').onchange = e => { st.fan = e.target.checked; draw(); };
 $('optDims').onchange = e => { st.dims = e.target.checked; draw(); };
 $('optSnap').onchange = e => { st.snap = e.target.checked; };
@@ -488,13 +657,31 @@ $('zoom').oninput = e => { st.S = +e.target.value; syncInputs(); draw(); };
 /* ---------- lohistamine ---------- */
 function evPos(e){ const r = cv.getBoundingClientRect(); return {x: e.clientX - r.left, y: e.clientY - r.top}; }
 function hitTest(p){
-  const o = optics();
-  if (Math.hypot(p.x - X(-st.d), p.y - Y(st.h)) < 12) return {what:'tip'};
-  const fx = o.mirror ? [-o.Fs] : [-st.F, st.F];
-  for (const x of fx) if (Math.hypot(p.x - X(x), p.y - Y(0)) < 11) return {what:'F', sgn: Math.sign(x)};
-  const ox = X(-st.d), lo = Math.min(Y(0), Y(st.h)), hi = Math.max(Y(0), Y(st.h));
-  if (Math.abs(p.x - ox) < 8 && p.y > lo - 6 && p.y < hi + 6) return {what:'base'};
+  const b = base();
+  if (multi()){
+    for (const k of keyPoints()) if (Math.hypot(p.x - X(k.x), p.y - Y(k.y)) < 12) return {what:'pt', name:k.name};
+  } else {
+    if (Math.hypot(p.x - X(-st.d), p.y - Y(st.h)) < 12) return {what:'tip'};
+  }
+  const fx = b.mirror ? [-b.Fs] : [-st.F, st.F];
+  for (const x of fx) if (Math.hypot(p.x - X(x), p.y - Y(0)) < 11) return {what:'F'};
+  if (!multi()){
+    const ox = X(-st.d), lo = Math.min(Y(0), Y(st.h)), hi = Math.max(Y(0), Y(st.h));
+    if (Math.abs(p.x - ox) < 8 && p.y > lo - 6 && p.y < hi + 6) return {what:'base'};
+  }
   return null;
+}
+function dragPoint(name, x, y){
+  const sx = snapv(x), sy = snapv(y);
+  if (st.obj === 'arrow2'){
+    if (-sx >= 0.5) st.a2.d = -sx;
+    if (name === 'A' && Math.abs(sy - st.a2.y2) >= 0.5) st.a2.y1 = sy;
+    if (name === 'B' && Math.abs(sy - st.a2.y1) >= 0.5) st.a2.y2 = sy;
+  } else {
+    const i = 'ABC'.indexOf(name), P = st.tri[i];
+    if (sx <= -0.5) P.x = sx;
+    if (i > 0) P.y = sy;            // A jääb peateljele
+  }
 }
 cv.addEventListener('pointerdown', e => {
   const p = evPos(e); const h = hitTest(p);
@@ -505,7 +692,9 @@ cv.addEventListener('pointermove', e => {
   const p = evPos(e);
   if (drag){
     const x = toX(p.x), y = toY(p.y);
-    if (drag.what === 'tip' || drag.what === 'base'){
+    if (drag.what === 'pt'){
+      dragPoint(drag.name, x, y);
+    } else if (drag.what === 'tip' || drag.what === 'base'){
       const d = snapv(-x);
       if (d >= 0.5) st.d = d;
       if (drag.what === 'tip'){ const h = snapv(y); if (Math.abs(h) >= 0.5) st.h = h; }
@@ -520,7 +709,7 @@ cv.addEventListener('pointermove', e => {
   }
   const h = hitTest(p);
   hover = h;
-  cv.style.cursor = h ? (h.what === 'base' ? 'ew-resize' : 'grab') : 'default';
+  cv.style.cursor = h ? (h.what === 'base' ? 'ew-resize' : (h.what === 'pt' && st.obj === 'triangle' && h.name === 'A' ? 'ew-resize' : 'grab')) : 'default';
   draw();
 });
 const end = () => { if (drag){ drag = null; cv.style.cursor = 'grab'; draw(); } };
@@ -536,8 +725,8 @@ function resize(){
 }
 new ResizeObserver(resize).observe(main);
 if (/github\.io$/.test(location.hostname)) $('back').style.display = 'block';
-renderRayList(); syncInputs(); resize();
-window.__op = {st, optics, rayDefs, outDir, draw};
+renderRayList(); renderPtList(); syncInputs(); resize();
+window.__op = {st, optics, imgPt, base, keyPoints, helperRay, rayDefs, outDir, draw, renderPtList};
 </script>
 </body>
 </html>
