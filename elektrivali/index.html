@@ -144,6 +144,7 @@
         <select id="scaleMode">
           <option value="fixed" selected>fikseeritud (pikkus ∝ E kogu joonisel)</option>
           <option value="auto">kohanduv (pikim vektor alati sama pikk)</option>
+          <option value="log">logaritmiline (pikkus ∝ log E)</option>
         </select>
       </label>
     </div>
@@ -205,6 +206,7 @@ let drag = null;
 const opts = { auto:true, density:16, grid:false, chain:true, snap:true, scaleMode:'fixed', fixedLog:4,
                equi:false, equiFill:true, equiDensity:4 };
 const EQ_RES = 2;
+const LOG_PX = 30, LOG_E0 = 10;   // logaritmiline skaala: px dekaadi kohta; väljatugevus (N/C), mis vastab pikkusele 0
 const EQ_N = 24;
 let eqStep = 0;
 
@@ -681,14 +683,20 @@ function drawHover(g, P){
   const sum = comps.reduce((a, f) => [a[0] + f[0], a[1] + f[1]], [0, 0]);
   const mags = comps.map(f => Math.hypot(f[0], f[1]));
   const ms = Math.hypot(sum[0], sum[1]);
-  let s;
+  // Noole ekraanipikkus väljatugevuse E järgi (sõltub valitud skaalast)
+  const isLog = opts.scaleMode === 'log';
+  let s = 1;
   if (opts.scaleMode === 'auto') s = 120 / Math.max(ms, ...mags);
-  else s = 100 / Math.pow(10, opts.fixedLog);
-  const scaleText = '100 px ≙ ' + fmtE(100 / s) + (opts.scaleMode === 'auto' ? ' (kehtib selles punktis)' : ' (kogu joonisel)');
+  else if (opts.scaleMode === 'fixed') s = 100 / Math.pow(10, opts.fixedLog);
+  const lenOf = m => isLog ? Math.max(0, LOG_PX * (Math.log10(m) - Math.log10(LOG_E0))) : m * s;
+  const tip = f => { const m = Math.hypot(f[0], f[1]); if (!(m > 0)) return [x, y]; const L = lenOf(m); return [x + f[0]/m*L, y + f[1]/m*L]; };
+  const scaleText = isLog
+    ? `logaritmiline, ${LOG_PX} px dekaadi kohta; 0 px ≙ ${fmtE(LOG_E0)} (kogu joonisel)`
+    : '100 px ≙ ' + fmtE(100 / s) + (opts.scaleMode === 'auto' ? ' (kehtib selles punktis)' : ' (kogu joonisel)');
 
   if (P.length > 1){
-    comps.forEach((f, i) => drawArrow(g, x, y, x + f[0]*s, y + f[1]*s, colorOf(P[i].idx), 2, false));
-    if (opts.chain){
+    comps.forEach((f, i) => { const [tx, ty] = tip(f); drawArrow(g, x, y, tx, ty, colorOf(P[i].idx), 2, false); });
+    if (opts.chain && !isLog){
       let cx = x + comps[0][0]*s, cy = y + comps[0][1]*s;
       for (let i = 1; i < comps.length; i++){
         const nx = cx + comps[i][0]*s, ny = cy + comps[i][1]*s;
@@ -697,14 +705,15 @@ function drawHover(g, P){
       }
     }
     comps.forEach((f, i) => {
-      const L = mags[i]*s;
+      const L = lenOf(mags[i]);
       if (L < 18) return;
-      const ux = f[0]/mags[i], uy = f[1]/mags[i];
-      label(g, 'E' + sub(P[i].idx + 1), x + f[0]*s + ux*12 - uy*10, y + f[1]*s + uy*12 + ux*10, colorOf(P[i].idx));
+      const ux = f[0]/mags[i], uy = f[1]/mags[i], [tx, ty] = tip(f);
+      label(g, 'E' + sub(P[i].idx + 1), tx + ux*12 - uy*10, ty + uy*12 + ux*10, colorOf(P[i].idx));
     });
   }
-  drawArrow(g, x, y, x + sum[0]*s, y + sum[1]*s, '#111827', 3.2, false);
-  if (ms*s > 14) label(g, 'E', x + sum[0]*s + sum[0]/ms*14, y + sum[1]*s + sum[1]/ms*14, '#111827');
+  const [sx, sy] = tip(sum);
+  drawArrow(g, x, y, sx, sy, '#111827', 3.2, false);
+  if (lenOf(ms) > 14) label(g, 'E', sx + sum[0]/ms*14, sy + sum[1]/ms*14, '#111827');
   g.fillStyle = '#111827'; g.beginPath(); g.arc(x, y, 3, 0, 2*Math.PI); g.fill();
 
   let html = `<div class="small" style="margin-bottom:6px">Punkt: x = ${fmtM(wx)} m, y = ${fmtM(wy)} m<br>Vektorite mõõtkava: ${scaleText}</div><table>`;
@@ -716,6 +725,7 @@ function drawHover(g, P){
   }
   html += `<tr class="tot"><td><span class="dot" style="background:#111827"></span>E</td><td>${fmtE(ms)}</td><td>${ms > 0 ? comma(worldAngle(sum[0], sum[1]).toFixed(0)) + '°' : '–'}</td></tr></table>`;
   html += `<div style="margin-top:6px">Potentsiaal: <b>φ = ${fmtV(potAt(P, x, y))}</b></div>`;
+  if (isLog && P.length > 1) html += '<div class="small" style="margin-top:4px">Logaritmilisel skaalal noolte pikkused ei liitu, seetõttu vektorite liitmise ahelat ei näidata. Summaarne E on arvutatud vektoritest endist.</div>';
   html += '<div class="small" style="margin-top:4px">Nurk on mõõdetud x-telje positiivsest suunast vastupäeva.</div>';
   ro.innerHTML = html;
 }
@@ -966,6 +976,7 @@ $('optSnap').onchange = e => { opts.snap = e.target.checked; };
 function updateFixedLabel(){ $('fixedVal').textContent = '100 px ≙ ' + fmtE(Math.pow(10, opts.fixedLog)); }
 const SCALE_EXPL = {
   auto: 'Kursori igas asukohas valitakse mõõtkava uuesti nii, et pikim vektor (mõni E<sub>i</sub> või summaarne E) on 120 px pikk. Ühes punktis on kõik vektorid samas mõõtkavas – nende pikkuste suhe ja liitmine on õiged –, kuid noolte pikkusi eri punktide vahel võrrelda ei saa. Selles punktis kehtiv mõõtkava on näidatud allpool („Väli kursori kohas“).',
+  log: 'Noole pikkus on võrdeline väljatugevuse logaritmiga: iga kümnekordne E kasv lisab noolele ühepalju pikkust (30 px), E = 10 N/C vastab pikkusele 0. Mõõtkava on kogu joonisel sama, nii et ka kaugel olevad nõrgad väljad on näha ja laengu juures ei lähe nooled joonisest välja. Noole pikkus ei ole E-ga võrdeline ja nooli ei saa vektoritena graafiliselt liita – liitmise ahelat selles vaates ei näidata.',
   fixed: 'Mõõtkava on kogu joonisel sama: noole pikkus on võrdeline väljatugevusega E igas punktis, seega saab noolte pikkusi võrrelda ka eri punktide vahel (nt punktlaengu korral E ∝ 1/r²). Laengute lähedal võivad nooled joonisest välja ulatuda – sobiva mõõtkava saad valida liuguriga.'
 };
 function updateScaleExpl(){ $('scaleExpl').innerHTML = SCALE_EXPL[opts.scaleMode]; }
