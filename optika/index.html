@@ -125,6 +125,23 @@ const RAY_COLORS = {1:'#dc2626', 2:'#16a34a', 3:'#2563eb', 4:'#9333ea'};
 const OBJ_COLOR = '#0f766e', IMG_COLOR = '#ea580c', EL_COLOR = '#0e7490';
 
 let hover = null, drag = null;
+// Peegli kaare kuju joonisel (pikslites): raadius ja suund (−1 nõgus: servad valguse poole, +1 kumer, 0 lääts)
+let arcR = 0, arcSg = 0;
+function sag(ypx){
+  if (!arcR) return 0;
+  const v = Math.min(Math.abs(ypx), arcR*0.999);
+  return arcR - Math.sqrt(arcR*arcR - v*v);
+}
+// Sirge (x0,y0)+t(dx,dy) lõikepunkt peegli kaarega (vertikaaltasandi x = 0 lähedal)
+function hitArc(x0, y0, dx, dy){
+  if (Math.abs(dx) < 1e-9 || !arcSg) return [x0, y0];
+  let t = 0;
+  for (let k = 0; k < 6; k++){
+    const y = y0 + dy*t;
+    t = (X(0) + arcSg*sag(y - Y(0)) - x0) / dx;
+  }
+  return [x0 + dx*t, y0 + dy*t];
+}
 
 /* ---------- abifunktsioonid ---------- */
 const comma = s => String(s).replace('.', ',');
@@ -221,14 +238,18 @@ function drawRay(o, r, color, width, alpha, noArrows){
     if (ax > 0) line(Hx, Hy, X(ax), Y(0), color, width*0.8, [5, 5]);
     else if (ax < -o.d) line(X(ax), Y(0), Px, Py, color, width*0.8, [5, 5]);
   }
-  line(Px, Py, Hx, Hy, color, width);
-  if (!noArrows) midArrow(Px, Py, Hx, Hy, color);
   const [dx, dy] = outDir(o, r.y);
   const pdx = dx*st.S, pdy = -dy*st.S;
-  const [Ex, Ey] = toEdge(Hx, Hy, pdx, pdy);
-  line(Hx, Hy, Ex, Ey, color, width);
-  const L = Math.hypot(Ex - Hx, Ey - Hy);
-  if (L > 40 && !noArrows){ const t = Math.min(0.5, 160/L); head(Hx + (Ex - Hx)*t, Hy + (Ey - Hy)*t, (Ex - Hx)/L, (Ey - Hy)/L, 10, color); }
+  // Nõguspeegli korral lõigatakse sisenev ja peegeldunud kiir kaare juures (kiirte sihid jäävad täpseks)
+  let Sin = [Hx, Hy], Sout = [Hx, Hy];
+  if (o.mirror && arcSg < 0){ Sin = hitArc(Hx, Hy, Px - Hx, Py - Hy); Sout = hitArc(Hx, Hy, pdx, pdy); }
+  line(Px, Py, Sin[0], Sin[1], color, width);
+  if (!noArrows) midArrow(Px, Py, Sin[0], Sin[1], color);
+  if (Sin !== Sout) line(Sin[0], Sin[1], Sout[0], Sout[1], color, width);
+  const [Ex, Ey] = toEdge(Sout[0], Sout[1], pdx, pdy);
+  line(Sout[0], Sout[1], Ex, Ey, color, width);
+  const L = Math.hypot(Ex - Sout[0], Ey - Sout[1]);
+  if (L > 40 && !noArrows){ const t = Math.min(0.5, 160/L); head(Sout[0] + (Ex - Sout[0])*t, Sout[1] + (Ey - Sout[1])*t, (Ex - Sout[0])/L, (Ey - Sout[1])/L, 10, color); }
   // näiva kujutise korral pikendus tahapoole
   if (!o.inf && o.f < 0){
     const ux = -pdx, uy = -pdy, ul = Math.hypot(ux, uy);
@@ -238,7 +259,7 @@ function drawRay(o, r, color, width, alpha, noArrows){
     tEnd = Math.max(tEnd, ((ix - Hx)*ux + (iy - Hy)*uy) / (ul*ul));
     if (r.backAux !== undefined) tEnd = Math.max(tEnd, ((X(r.backAux) - Hx)*ux + (Y(0) - Hy)*uy) / (ul*ul));
     tEnd *= 1.08;
-    line(Hx, Hy, Hx + ux*tEnd, Hy + uy*tEnd, color, width*0.8, [5, 5]);
+    line(Sout[0], Sout[1], Hx + ux*tEnd, Hy + uy*tEnd, color, width*0.8, [5, 5]);
   }
   ctx.restore();
 }
@@ -268,6 +289,7 @@ function drawAxis(){
 function drawElement(o, A){
   const x = X(0), y1 = Y(A), y2 = Y(-A);
   ctx.save();
+  arcR = 0; arcSg = 0;
   if (!o.mirror){
     // läätse kontuur (dekoratiivne)
     const w = 9, hgt = y2 - y1;
@@ -286,13 +308,18 @@ function drawElement(o, A){
     if (st.type === 'conv'){ head(x, y1 + s*0.55, 0, -1, s, EL_COLOR); head(x, y2 - s*0.55, 0, 1, s, EL_COLOR); }
     else { head(x, y1 + s*0.55, 0, 1, s, EL_COLOR); head(x, y2 - s*0.55, 0, -1, s, EL_COLOR); }
   } else {
-    // peegel: peegeldav pind x = 0, viirutus taga (paremal), otsad painutatud
-    const bend = st.type === 'concave' ? -10 : 10;
+    // peegel: kaarjas peegeldav pind (tipp x = 0 juures), viirutus taga (paremal)
+    const Apx = A * st.S;
+    const sEdge = Math.max(12, Math.min(30, 0.14 * Apx));     // kaare sügavus servas (px)
+    arcR = (Apx*Apx + sEdge*sEdge) / (2*sEdge);
+    arcSg = st.type === 'concave' ? -1 : 1;
+    const xa = yy => x + arcSg*sag(yy - Y(0));
     ctx.strokeStyle = 'rgba(14,116,144,0.55)'; ctx.lineWidth = 1.2; ctx.beginPath();
-    for (let yy = y1 + 4; yy < y2; yy += 8){ ctx.moveTo(x + 1, yy); ctx.lineTo(x + 9, yy - 7); }
+    for (let yy = y1 + 4; yy < y2; yy += 8){ const xs = xa(yy); ctx.moveTo(xs + 2, yy); ctx.lineTo(xs + 10, yy - 7); }
     ctx.stroke();
-    ctx.strokeStyle = EL_COLOR; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.beginPath();
-    ctx.moveTo(x + bend, y1 - 8); ctx.lineTo(x, y1); ctx.lineTo(x, y2); ctx.lineTo(x + bend, y2 + 8); ctx.stroke();
+    ctx.strokeStyle = EL_COLOR; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.beginPath();
+    for (let yy = y1; yy <= y2 + 0.5; yy += 2){ const xs = xa(Math.min(yy, y2)); if (yy === y1) ctx.moveTo(xs, yy); else ctx.lineTo(xs, Math.min(yy, y2)); }
+    ctx.stroke();
   }
   ctx.font = '600 12px system-ui, sans-serif'; ctx.fillStyle = EL_COLOR; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
   ctx.fillText(o.T.name, x, y1 - 12);
