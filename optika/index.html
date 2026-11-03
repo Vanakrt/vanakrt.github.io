@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Peeglid ja läätsed</title>
+<style>
+  :root{
+    color-scheme: light;
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg)}
+  #app{display:flex;height:100vh}
+  aside{width:340px;flex:none;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:16px 16px 24px}
+  main{flex:1;position:relative;min-width:0}
+  canvas{display:block;touch-action:none}
+  h1{font-size:18px;margin:0 0 12px}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:18px 0 8px}
+  label{font-size:13px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  input[type=number],select{font:inherit;font-size:13px;padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px;width:74px;background:#fff;color:#1f2937;-webkit-text-fill-color:#1f2937;opacity:1}
+  select{width:auto}
+  button{font:inherit;font-size:13px;padding:5px 10px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;color:#1f2937;cursor:pointer}
+  button:hover{background:#f1f5f9}
+  .types{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .types button{padding:8px 6px;font-weight:600}
+  .types button.on{background:#1f2937;color:#fff;border-color:#1f2937}
+  .chk{display:flex;gap:6px;align-items:center;margin-bottom:6px;font-size:13px}
+  .sw{display:inline-block;width:18px;height:3px;border-radius:2px;vertical-align:middle}
+  input[type=range]{width:140px}
+  .unit{font-size:12px;color:var(--muted)}
+  .small{font-size:12px;color:var(--muted);line-height:1.45}
+  #readout{font-size:13px;line-height:1.6}
+  #readout b{font-weight:700}
+  .tag{display:inline-block;padding:1px 7px;border-radius:10px;font-size:12px;margin:2px 2px 0 0;background:#f1f5f9;border:1px solid #e2e8f0}
+  #hint{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(31,41,55,.88);color:#fff;font-size:13px;padding:6px 12px;border-radius:8px;pointer-events:none;max-width:90%;text-align:center}
+  #back{display:none;font-size:13px;margin-bottom:10px}
+  #back a{color:#2563eb;text-decoration:none}
+  @media (max-width:760px){
+    #app{flex-direction:column;height:auto}
+    aside{width:auto;border-right:none;border-bottom:1px solid var(--line)}
+    main{height:75vh}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside>
+    <div id="back"><a href="../">← Kõik simulatsioonid</a></div>
+    <h1>Peeglid ja läätsed</h1>
+
+    <h2>Optiline element</h2>
+    <div class="types" id="types">
+      <button data-t="concave">Nõguspeegel</button>
+      <button data-t="convex">Kumerpeegel</button>
+      <button data-t="conv">Kumerlääts</button>
+      <button data-t="div">Nõguslääts</button>
+    </div>
+
+    <h2>Suurused</h2>
+    <div class="row">
+      <label>Fookuskaugus |F| <input type="number" id="inF" min="1" step="0.5" value="10"> <span class="unit">cm</span></label>
+    </div>
+    <div class="row">
+      <label>Eseme kaugus d <input type="number" id="inD" min="0.5" step="0.5" value="25"> <span class="unit">cm</span></label>
+    </div>
+    <div class="row">
+      <label>Eseme kõrgus h <input type="number" id="inH" step="0.5" value="4"> <span class="unit">cm</span></label>
+    </div>
+    <div class="row">
+      <label>Ese
+        <select id="objType">
+          <option value="arrow" selected>nool</option>
+          <option value="candle">küünal</option>
+        </select>
+      </label>
+    </div>
+
+    <h2>Kiired</h2>
+    <div id="rayList"></div>
+    <label class="chk"><input type="checkbox" id="optFan"> Kiirtekimp eseme tipust (kõik kiired)</label>
+    <label class="chk"><input type="checkbox" id="optDims" checked> Näita kaugusi d ja f</label>
+    <label class="chk"><input type="checkbox" id="optSnap" checked> Joonda 0,5 cm sammuga</label>
+    <div class="row">
+      <label>Suurendus <input type="range" id="zoom" min="4" max="40" step="1" value="18"></label>
+      <span class="small" id="zoomVal"></span>
+    </div>
+
+    <h2>Kujutis</h2>
+    <div id="readout"></div>
+
+    <h2>Kasutamine</h2>
+    <div class="small">
+      • Lohista noole tippu – muudad eseme kaugust ja kõrgust; noole alust lohistades muutub ainult kaugus.<br>
+      • Lohista fookust <b>F</b> – muudad fookuskaugust.<br>
+      • Pidevjoon = tegelik kiir, kriipsjoon = kiire pikendus (näiv). Näiv kujutis on kriipsjoonega.<br>
+      • Joonis on paraksiaalses lähenduses: peegel ja lääts on kujutatud tasandina, millel kiir murdub või peegeldub (nagu õpikujoonistel).<br>
+      • Tähistused: d – eseme kaugus, f – kujutise kaugus, F – fookuskaugus, h ja H – eseme ja kujutise kõrgus.<br>
+      • Valem: 1/F = 1/d + 1/f; suurendus Γ = H/h = |f|/d; optiline tugevus D = 1/F (F meetrites).<br>
+      • Märgid: F &lt; 0 nõgusläätse ja kumerpeegli korral; f &lt; 0, kui kujutis on näiv.
+    </div>
+  </aside>
+  <main id="main">
+    <canvas id="cv"></canvas>
+    <div id="hint">Lohista eset või fookust F</div>
+  </main>
+</div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const main = $('main'), cv = $('cv'), ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+
+const st = { type:'conv', F:10, d:25, h:4, obj:'arrow', fan:false, dims:true, snap:true, S:18,
+             rays:{1:true, 2:true, 3:true, 4:true} };
+const TYPES = {
+  concave: {name:'Nõguspeegel', mirror:true,  sign: 1},
+  convex:  {name:'Kumerpeegel', mirror:true,  sign:-1},
+  conv:    {name:'Kumerlääts',  mirror:false, sign: 1},
+  div:     {name:'Nõguslääts',  mirror:false, sign:-1},
+};
+const RAY_COLORS = {1:'#dc2626', 2:'#16a34a', 3:'#2563eb', 4:'#9333ea'};
+const OBJ_COLOR = '#0f766e', IMG_COLOR = '#ea580c', EL_COLOR = '#0e7490';
+
+let hover = null, drag = null;
+
+/* ---------- abifunktsioonid ---------- */
+const comma = s => String(s).replace('.', ',');
+const minus = s => String(s).replace(/^-/, '−');
+function fmt(v, dec = 1){
+  if (!isFinite(v)) return '∞';
+  const r = Math.abs(v) < 0.5 * Math.pow(10, -dec) ? 0 : v;
+  return minus(comma(r.toFixed(dec)));
+}
+const X0 = () => TYPES[st.type].mirror ? Math.round(W*0.68) : Math.round(W/2);   // elemendi asukoht ekraanil
+const X = x => X0() + x * st.S;      // element asub x = 0 juures
+const Y = y => H/2 - y * st.S;
+const toX = px => (px - X0()) / st.S;
+const toY = py => (H/2 - py) / st.S;
+const snapv = v => st.snap ? Math.round(v * 2) / 2 : v;
+
+/* ---------- optika ---------- */
+// Arvutus "läätse raamistikus": valgus tuleb vasakult, element x = 0 juures.
+// Peegli korral peegeldatakse väljuvate kiirte x-suund (x → −x).
+function optics(){
+  const T = TYPES[st.type];
+  const Fs = T.sign * st.F, d = st.d, h = st.h;
+  const inf = Math.abs(d - Fs) < 1e-9;
+  let f = null, hp = null;
+  if (!inf){ f = d * Fs / (d - Fs); hp = -h * f / d; }
+  const imgX = inf ? null : (T.mirror ? -f : f);
+  return {T, Fs, d, h, f, hp, inf, imgX, mirror: T.mirror, real: !inf && f > 0};
+}
+// Kiir eseme tipust, mis tabab elementi kõrgusel y. Tagastab väljuva suuna (pikslites arvutamiseks cm-des).
+function outDir(o, y){
+  let dx, dy;
+  if (o.inf){ dx = o.d; dy = -o.h; }
+  else if (o.f > 0){ dx = o.f; dy = o.hp - y; }
+  else { dx = -o.f; dy = y - o.hp; }
+  if (o.mirror) dx = -dx;
+  return [dx, dy];
+}
+function rayDefs(o){
+  const {d, h, Fs, mirror} = o;
+  const R = [];
+  // 1: paralleelne peateljega → läbi fookuse
+  R.push({id:1, y:h, backAux: mirror ? -Fs : Fs});
+  if (mirror){
+    // 2: läbi fookuse → paralleelne
+    if (Math.abs(d - Fs) > 1e-9) R.push({id:2, y: -h*Fs/(d - Fs), inAux: -Fs});
+    // 3: läbi kõveruskeskpunkti → tagasi iseendale
+    if (Math.abs(d - 2*Fs) > 1e-9) R.push({id:3, y: -2*h*Fs/(d - 2*Fs), inAux: -2*Fs});
+    // 4: peegli tippu → peegeldub sümmeetriliselt
+    R.push({id:4, y:0});
+  } else {
+    // 2: läbi optilise keskpunkti → murdumata
+    R.push({id:2, y:0});
+    // 3: läbi fookuse → paralleelne
+    if (Math.abs(d - Fs) > 1e-9) R.push({id:3, y: -h*Fs/(d - Fs), inAux: -Fs});
+  }
+  return R;
+}
+const RAY_NAMES = {
+  lens:   {1:'paralleelne peateljega → läbi fookuse', 2:'läbi optilise keskpunkti (ei murdu)', 3:'läbi fookuse → paralleelne peateljega'},
+  mirror: {1:'paralleelne peateljega → läbi fookuse', 2:'läbi fookuse → paralleelne peateljega', 3:'läbi kõveruskeskpunkti C → tagasi samas sihis', 4:'peegli tippu → peegeldub sümmeetriliselt'},
+};
+
+/* ---------- joonistamine ---------- */
+function line(x1, y1, x2, y2, color, w, dash){
+  ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = w; ctx.lineCap = 'round';
+  if (dash) ctx.setLineDash(dash);
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.restore();
+}
+function head(x, y, ux, uy, size, color){
+  ctx.fillStyle = color; ctx.beginPath();
+  ctx.moveTo(x + ux*size*0.6, y + uy*size*0.6);
+  ctx.lineTo(x - ux*size*0.6 - uy*size*0.42, y - uy*size*0.6 + ux*size*0.42);
+  ctx.lineTo(x - ux*size*0.6 + uy*size*0.42, y - uy*size*0.6 - ux*size*0.42);
+  ctx.closePath(); ctx.fill();
+}
+function midArrow(x1, y1, x2, y2, color){
+  const L = Math.hypot(x2 - x1, y2 - y1); if (L < 30) return;
+  head((x1 + x2)/2, (y1 + y2)/2, (x2 - x1)/L, (y2 - y1)/L, 10, color);
+}
+// Kiire lõpp-punkt joonise servas (pikslites)
+function toEdge(px, py, dx, dy){
+  let t = Infinity;
+  if (dx > 0) t = Math.min(t, (W + 20 - px)/dx); else if (dx < 0) t = Math.min(t, (-20 - px)/dx);
+  if (dy > 0) t = Math.min(t, (H + 20 - py)/dy); else if (dy < 0) t = Math.min(t, (-20 - py)/dy);
+  if (!isFinite(t)) t = 0;
+  return [px + dx*t, py + dy*t];
+}
+function drawRay(o, r, color, width, alpha, noArrows){
+  ctx.save(); ctx.globalAlpha = alpha;
+  const Px = X(-o.d), Py = Y(o.h), Hx = X(0), Hy = Y(r.y);
+  // abijoon sisenevale kiirele (näiv osa, nt fookusest läbi tulev kiir)
+  if (r.inAux !== undefined){
+    const ax = r.inAux;
+    if (ax > 0) line(Hx, Hy, X(ax), Y(0), color, width*0.8, [5, 5]);
+    else if (ax < -o.d) line(X(ax), Y(0), Px, Py, color, width*0.8, [5, 5]);
+  }
+  line(Px, Py, Hx, Hy, color, width);
+  if (!noArrows) midArrow(Px, Py, Hx, Hy, color);
+  const [dx, dy] = outDir(o, r.y);
+  const pdx = dx*st.S, pdy = -dy*st.S;
+  const [Ex, Ey] = toEdge(Hx, Hy, pdx, pdy);
+  line(Hx, Hy, Ex, Ey, color, width);
+  const L = Math.hypot(Ex - Hx, Ey - Hy);
+  if (L > 40 && !noArrows){ const t = Math.min(0.5, 160/L); head(Hx + (Ex - Hx)*t, Hy + (Ey - Hy)*t, (Ex - Hx)/L, (Ey - Hy)/L, 10, color); }
+  // näiva kujutise korral pikendus tahapoole
+  if (!o.inf && o.f < 0){
+    const ux = -pdx, uy = -pdy, ul = Math.hypot(ux, uy);
+    // pikenda kujutise punktini või abipunktini (kumb kaugemal)
+    let tEnd = 0;
+    const ix = X(o.imgX), iy = Y(o.hp);
+    tEnd = Math.max(tEnd, ((ix - Hx)*ux + (iy - Hy)*uy) / (ul*ul));
+    if (r.backAux !== undefined) tEnd = Math.max(tEnd, ((X(r.backAux) - Hx)*ux + (Y(0) - Hy)*uy) / (ul*ul));
+    tEnd *= 1.08;
+    line(Hx, Hy, Hx + ux*tEnd, Hy + uy*tEnd, color, width*0.8, [5, 5]);
+  }
+  ctx.restore();
+}
+function drawAxis(){
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+  // ruudustik 5 cm
+  const step = 5 * st.S;
+  ctx.strokeStyle = 'rgba(15,23,42,0.05)'; ctx.lineWidth = 1; ctx.beginPath();
+  for (let x = X0() % step; x < W; x += step){ ctx.moveTo(Math.round(x)+.5, 0); ctx.lineTo(Math.round(x)+.5, H); }
+  for (let y = H/2 % step; y < H; y += step){ ctx.moveTo(0, Math.round(y)+.5); ctx.lineTo(W, Math.round(y)+.5); }
+  ctx.stroke();
+  // peatelg
+  line(0, Math.round(H/2)+.5, W, Math.round(H/2)+.5, '#475569', 1.2);
+  // jaotised iga cm, sildid iga 10 cm
+  ctx.strokeStyle = '#94a3b8'; ctx.beginPath();
+  const i0 = Math.floor(-X0()/st.S), i1 = Math.ceil((W - X0())/st.S);
+  for (let i = i0; i <= i1; i++){
+    if (st.S < 6 && i % 5) continue;
+    const x = Math.round(X(i)) + .5, len = i % 10 === 0 ? 6 : (i % 5 === 0 ? 4 : 2);
+    ctx.moveTo(x, H/2 - len); ctx.lineTo(x, H/2 + len);
+  }
+  ctx.stroke();
+  ctx.font = '11px system-ui, sans-serif'; ctx.fillStyle = '#94a3b8'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  for (let i = i0; i <= i1; i++) if (i % 10 === 0 && i !== 0) ctx.fillText(minus(String(i)), X(i), H/2 - 8);
+  ctx.textAlign = 'right'; ctx.fillText('cm', W - 6, H/2 - 8);
+}
+function drawElement(o, A){
+  const x = X(0), y1 = Y(A), y2 = Y(-A);
+  ctx.save();
+  if (!o.mirror){
+    // läätse kontuur (dekoratiivne)
+    const w = 9, hgt = y2 - y1;
+    ctx.fillStyle = 'rgba(14,116,144,0.10)'; ctx.strokeStyle = 'rgba(14,116,144,0.35)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    if (st.type === 'conv'){
+      ctx.moveTo(x, y1); ctx.quadraticCurveTo(x + 2*w, (y1 + y2)/2, x, y2); ctx.quadraticCurveTo(x - 2*w, (y1 + y2)/2, x, y1);
+    } else {
+      ctx.moveTo(x - w, y1); ctx.lineTo(x + w, y1); ctx.quadraticCurveTo(x, (y1 + y2)/2, x + w, y2);
+      ctx.lineTo(x - w, y2); ctx.quadraticCurveTo(x, (y1 + y2)/2, x - w, y1);
+    }
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    line(x, y1, x, y2, EL_COLOR, 2.5);
+    // nooleotsad: kumerlääts ↕, nõguslääts ⤓⤒
+    const s = 11;
+    if (st.type === 'conv'){ head(x, y1 + s*0.55, 0, -1, s, EL_COLOR); head(x, y2 - s*0.55, 0, 1, s, EL_COLOR); }
+    else { head(x, y1 + s*0.55, 0, 1, s, EL_COLOR); head(x, y2 - s*0.55, 0, -1, s, EL_COLOR); }
+  } else {
+    // peegel: peegeldav pind x = 0, viirutus taga (paremal), otsad painutatud
+    const bend = st.type === 'concave' ? -10 : 10;
+    ctx.strokeStyle = 'rgba(14,116,144,0.55)'; ctx.lineWidth = 1.2; ctx.beginPath();
+    for (let yy = y1 + 4; yy < y2; yy += 8){ ctx.moveTo(x + 1, yy); ctx.lineTo(x + 9, yy - 7); }
+    ctx.stroke();
+    ctx.strokeStyle = EL_COLOR; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.beginPath();
+    ctx.moveTo(x + bend, y1 - 8); ctx.lineTo(x, y1); ctx.lineTo(x, y2); ctx.lineTo(x + bend, y2 + 8); ctx.stroke();
+  }
+  ctx.font = '600 12px system-ui, sans-serif'; ctx.fillStyle = EL_COLOR; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  ctx.fillText(o.T.name, x, y1 - 12);
+  ctx.restore();
+}
+function marker(xcm, text, color, big){
+  const x = X(xcm), y = Y(0);
+  if (x < -20 || x > W + 20) return;
+  ctx.save();
+  ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, big ? 5 : 3.5, 0, 2*Math.PI); ctx.fill();
+  if (big){ ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); }
+  ctx.font = '600 13px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.strokeText(text, x, y + 9);
+  ctx.fillText(text, x, y + 9);
+  ctx.restore();
+}
+function drawArrowObj(xcm, hcm, color, dashed, isImage){
+  const x = X(xcm), y0 = Y(0), y1 = Y(hcm);
+  if (Math.abs(y1 - y0) < 1) return;
+  const uy = Math.sign(y1 - y0);
+  ctx.save();
+  if (st.obj === 'candle'){
+    const w = 10, flameH = Math.min(22, Math.abs(y1 - y0)*0.35);
+    const bodyTop = y1 - uy*flameH*0.15;
+    ctx.globalAlpha = dashed ? 0.55 : 1;
+    ctx.fillStyle = isImage ? '#fed7aa' : '#ccfbf1'; ctx.strokeStyle = color; ctx.lineWidth = 2;
+    if (dashed) ctx.setLineDash([4, 3]);
+    ctx.beginPath(); ctx.rect(x - w/2, Math.min(y0, bodyTop + uy*flameH), w, Math.abs(bodyTop + uy*flameH - y0)); ctx.fill(); ctx.stroke();
+    ctx.setLineDash([]);
+    // leek
+    const fy0 = bodyTop + uy*flameH, fy1 = y1;
+    ctx.fillStyle = isImage ? '#f97316' : '#f59e0b';
+    ctx.beginPath(); ctx.moveTo(x, fy1);
+    ctx.quadraticCurveTo(x + 7, (fy0 + fy1)/2, x, fy0); ctx.quadraticCurveTo(x - 7, (fy0 + fy1)/2, x, fy1);
+    ctx.fill();
+  } else {
+    line(x, y0, x, y1 - uy*8, color, 3, dashed ? [6, 4] : null);
+    head(x, y1 - uy*5, 0, uy, 16, color);
+  }
+  ctx.restore();
+}
+function dimension(x1cm, x2cm, ycm, text, color){
+  const a = X(x1cm), b = X(x2cm), y = Y(ycm);
+  if (Math.abs(b - a) < 4) return;
+  ctx.save();
+  line(a, y, b, y, color, 1.2);
+  line(a, y - 5, a, y + 5, color, 1.2); line(b, y - 5, b, y + 5, color, 1.2);
+  ctx.font = '600 12px system-ui, sans-serif'; ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.9)';
+  const mx = Math.max(30, Math.min(W - 30, (a + b)/2));
+  ctx.strokeText(text, mx, y + 4); ctx.fillText(text, mx, y + 4);
+  ctx.restore();
+}
+
+function draw(){
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  drawAxis();
+  const o = optics();
+  const R = rayDefs(o).filter(r => st.rays[r.id]);
+  // elemendi ava: katab kiirte tabamiskõrgused
+  const maxCm = (H/2 - 40) / st.S;
+  let A = Math.max(6, Math.abs(st.h)*1.4, ...R.map(r => Math.abs(r.y)*1.12 + 0.5));
+  A = Math.min(A, maxCm);
+  drawElement(o, A);
+  // fookused ja kõveruskeskpunktid
+  const Fa = st.F;
+  if (o.mirror){
+    const sideF = -o.Fs, sideC = -2*o.Fs;
+    marker(sideF, 'F', '#b91c1c', true);
+    marker(sideC, 'C', '#7c3aed', false);
+  } else {
+    marker(-Fa, 'F', '#b91c1c', true); marker(Fa, 'F', '#b91c1c', true);
+    marker(-2*Fa, '2F', '#64748b', false); marker(2*Fa, '2F', '#64748b', false);
+  }
+  // kiirtekimp
+  if (st.fan){
+    const N = 13;
+    for (let k = 0; k < N; k++){
+      const y = -A*0.95 + 2*A*0.95*k/(N - 1);
+      drawRay(o, {id:0, y}, '#94a3b8', 1, 0.6, true);
+    }
+  }
+  for (const r of R) drawRay(o, r, RAY_COLORS[r.id], 1.8, 1);
+  // ese ja kujutis
+  drawArrowObj(-st.d, st.h, OBJ_COLOR, false, false);
+  label(X(-st.d), Y(st.h) + (st.h >= 0 ? -16 : 16), 'ese', OBJ_COLOR);
+  if (!o.inf){
+    drawArrowObj(o.imgX, o.hp, IMG_COLOR, !o.real, true);
+    const lx = X(o.imgX), ly = Y(o.hp) + (o.hp >= 0 ? -16 : 16);
+    if (lx > 0 && lx < W) label(lx, ly, o.real ? 'kujutis' : 'näiv kujutis', IMG_COLOR);
+  }
+  if (st.dims){
+    const yd = -Math.min(A + 2.2, (H/2 - 70) / st.S);
+    dimension(-st.d, 0, yd, 'd = ' + fmt(st.d) + ' cm', OBJ_COLOR);
+    if (!o.inf){
+      const yf = o.imgX < 0 ? yd - 2.2 : yd;   // kui kujutis on esemega samal pool, joonista madalamale
+      dimension(0, o.imgX, yf, 'f = ' + fmt(o.f) + ' cm', IMG_COLOR);
+    }
+  }
+  // tippude käepidemed
+  handle(X(-st.d), Y(st.h), hover && hover.what === 'tip');
+  readout(o);
+}
+function handle(x, y, active){
+  ctx.save(); ctx.beginPath(); ctx.arc(x, y, active ? 8 : 6, 0, 2*Math.PI);
+  ctx.strokeStyle = OBJ_COLOR; ctx.lineWidth = 2; ctx.fillStyle = active ? 'rgba(15,118,110,.25)' : 'rgba(255,255,255,.6)';
+  ctx.fill(); ctx.stroke(); ctx.restore();
+}
+function label(x, y, text, color){
+  ctx.save(); ctx.font = '600 13px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.strokeText(text, x, y);
+  ctx.fillStyle = color; ctx.fillText(text, x, y); ctx.restore();
+}
+function readout(o){
+  const D = 100 / o.Fs;
+  let html = `<div>Fookuskaugus <b>F = ${fmt(o.Fs)} cm</b>, optiline tugevus <b>D = ${fmt(D, 2)} dptr</b></div>`;
+  html += `<div>Eseme kaugus <b>d = ${fmt(st.d)} cm</b>, kõrgus <b>h = ${fmt(Math.abs(st.h))} cm</b></div>`;
+  if (o.inf){
+    html += `<div style="margin-top:6px"><b>Ese on fookuses</b>: kiired väljuvad paralleelselt ega lõiku – kujutist ei teki (kujutis on lõpmatuses).</div>`;
+  } else {
+    const G = Math.abs(o.f) / st.d;
+    html += `<div>Kujutise kaugus <b>f = ${fmt(o.f)} cm</b></div>`;
+    html += `<div>Suurendus <b>Γ = ${fmt(G, 2)}</b>, kujutise kõrgus <b>H = ${fmt(Math.abs(o.hp))} cm</b></div>`;
+    const tags = [];
+    tags.push(o.real ? 'tõeline' : 'näiv');
+    tags.push(o.hp * st.h < 0 ? 'pööratud' : 'päris (püsti)');
+    tags.push(Math.abs(G - 1) < 0.005 ? 'sama suur' : (G > 1 ? 'suurendatud' : 'vähendatud'));
+    html += `<div style="margin-top:4px">${tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>`;
+    const ix = X(o.imgX), iy = Y(o.hp);
+    if (ix < 0 || ix > W || iy < 0 || iy > H) html += `<div class="small" style="margin-top:4px">Kujutis jääb joonisest välja – vähenda suurendust.</div>`;
+    const side = o.mirror ? (o.real ? 'peegli ees' : 'peegli taga') : (o.real ? 'läätse taga (teisel pool)' : 'läätse ees (esemega samal pool)');
+    html += `<div class="small" style="margin-top:2px">Kujutis asub ${side}.</div>`;
+  }
+  $('readout').innerHTML = html;
+}
+
+/* ---------- juhtelemendid ---------- */
+function renderRayList(){
+  const kind = TYPES[st.type].mirror ? 'mirror' : 'lens';
+  const names = RAY_NAMES[kind];
+  $('rayList').innerHTML = Object.keys(names).map(id =>
+    `<label class="chk"><input type="checkbox" data-ray="${id}" ${st.rays[id] ? 'checked' : ''}> <span class="sw" style="background:${RAY_COLORS[id]}"></span> ${id}: ${names[id]}</label>`
+  ).join('');
+  document.querySelectorAll('[data-ray]').forEach(cb => cb.onchange = e => { st.rays[e.target.dataset.ray] = e.target.checked; draw(); });
+}
+function syncInputs(){
+  $('inF').value = +st.F.toFixed(2); $('inD').value = +st.d.toFixed(2); $('inH').value = +st.h.toFixed(2);
+  document.querySelectorAll('#types button').forEach(b => b.classList.toggle('on', b.dataset.t === st.type));
+  $('zoomVal').textContent = '1 cm = ' + st.S + ' px';
+}
+document.querySelectorAll('#types button').forEach(b => b.onclick = () => { st.type = b.dataset.t; renderRayList(); syncInputs(); draw(); });
+const numIn = (id, key, min, allowNeg) => $(id).oninput = e => {
+  const v = parseFloat(String(e.target.value).replace(',', '.'));
+  if (!isFinite(v)) return;
+  if (!allowNeg && v < min) return;
+  if (allowNeg && Math.abs(v) < 0.1) return;
+  st[key] = v; draw();
+};
+numIn('inF', 'F', 1, false); numIn('inD', 'd', 0.5, false); numIn('inH', 'h', 0, true);
+$('objType').onchange = e => { st.obj = e.target.value; draw(); };
+$('optFan').onchange = e => { st.fan = e.target.checked; draw(); };
+$('optDims').onchange = e => { st.dims = e.target.checked; draw(); };
+$('optSnap').onchange = e => { st.snap = e.target.checked; };
+$('zoom').oninput = e => { st.S = +e.target.value; syncInputs(); draw(); };
+
+/* ---------- lohistamine ---------- */
+function evPos(e){ const r = cv.getBoundingClientRect(); return {x: e.clientX - r.left, y: e.clientY - r.top}; }
+function hitTest(p){
+  const o = optics();
+  if (Math.hypot(p.x - X(-st.d), p.y - Y(st.h)) < 12) return {what:'tip'};
+  const fx = o.mirror ? [-o.Fs] : [-st.F, st.F];
+  for (const x of fx) if (Math.hypot(p.x - X(x), p.y - Y(0)) < 11) return {what:'F', sgn: Math.sign(x)};
+  const ox = X(-st.d), lo = Math.min(Y(0), Y(st.h)), hi = Math.max(Y(0), Y(st.h));
+  if (Math.abs(p.x - ox) < 8 && p.y > lo - 6 && p.y < hi + 6) return {what:'base'};
+  return null;
+}
+cv.addEventListener('pointerdown', e => {
+  const p = evPos(e); const h = hitTest(p);
+  if (!h) return;
+  drag = h; cv.setPointerCapture(e.pointerId); cv.style.cursor = 'grabbing';
+});
+cv.addEventListener('pointermove', e => {
+  const p = evPos(e);
+  if (drag){
+    const x = toX(p.x), y = toY(p.y);
+    if (drag.what === 'tip' || drag.what === 'base'){
+      const d = snapv(-x);
+      if (d >= 0.5) st.d = d;
+      if (drag.what === 'tip'){ const h = snapv(y); if (Math.abs(h) >= 0.5) st.h = h; }
+    } else if (drag.what === 'F'){
+      const T = TYPES[st.type];
+      // nõguspeegli F on ees (x < 0), kumerpeegli F taga (x > 0); läätsel mõlemal pool
+      let F = T.mirror ? snapv(Math.abs(x)) : snapv(Math.abs(x));
+      if (F >= 1) st.F = F;
+    }
+    syncInputs(); draw();
+    return;
+  }
+  const h = hitTest(p);
+  hover = h;
+  cv.style.cursor = h ? (h.what === 'base' ? 'ew-resize' : 'grab') : 'default';
+  draw();
+});
+const end = () => { if (drag){ drag = null; cv.style.cursor = 'grab'; draw(); } };
+cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+
+function resize(){
+  const r = main.getBoundingClientRect();
+  W = Math.max(200, Math.floor(r.width)); H = Math.max(200, Math.floor(r.height));
+  DPR = window.devicePixelRatio || 1;
+  cv.width = Math.round(W*DPR); cv.height = Math.round(H*DPR);
+  cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  draw();
+}
+new ResizeObserver(resize).observe(main);
+if (/github\.io$/.test(location.hostname)) $('back').style.display = 'block';
+renderRayList(); syncInputs(); resize();
+window.__op = {st, optics, rayDefs, outDir, draw};
+</script>
+</body>
+</html>

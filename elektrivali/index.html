@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elektrivälja jõujooned</title>
+<style>
+  :root{
+    color-scheme: light;
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb;
+    --pos:#dc2626; --neg:#2563eb;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg)}
+  #app{display:flex;height:100vh}
+  aside{width:350px;flex:none;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:16px 16px 24px}
+  main{flex:1;position:relative;min-width:0}
+  canvas{display:block;touch-action:none;cursor:crosshair}
+  h1{font-size:18px;margin:0 0 12px}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:18px 0 8px}
+  h3{font-size:15px;margin:12px 0 6px}
+  label{font-size:13px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  input[type=number],select{font:inherit;font-size:13px;padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px;width:74px;background:#fff;color:#1f2937;-webkit-text-fill-color:#1f2937;opacity:1}
+  select{width:auto}
+  button{font:inherit;font-size:13px;padding:5px 10px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;color:#1f2937;cursor:pointer}
+  button:hover{background:#f1f5f9}
+  button.primary{background:#1f2937;color:#fff;border-color:#1f2937}
+  button.primary:hover{background:#374151}
+  .btns{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+  .btns button{padding:6px 6px;text-align:center}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  td{padding:4px 3px;border-bottom:1px solid var(--line);vertical-align:middle}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:-1px}
+  .sign{width:30px;padding:3px 0;font-weight:700}
+  .sign.p{color:var(--pos)} .sign.n{color:var(--neg)}
+  .pos{color:var(--muted);font-size:12px;white-space:nowrap}
+  .pos.un{color:#b45309;font-style:italic}
+  .del{border:none;background:none;color:var(--muted);padding:2px 6px}
+  .del:hover{color:#b91c1c;background:none}
+  td input[type=number]{width:62px}
+  .unit{font-size:12px;color:var(--muted)}
+  .chk{display:flex;gap:6px;align-items:center;margin-bottom:6px;font-size:13px}
+  input[type=range]{width:120px}
+  #readout{font-size:13px}
+  #readout table td{border-bottom:1px dashed var(--line)}
+  #readout .tot td{font-weight:700;border-bottom:none}
+  .small{font-size:12px;color:var(--muted);line-height:1.45}
+  .msg{font-size:12px;color:#b91c1c;min-height:0}
+  #hint{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(31,41,55,.88);color:#fff;font-size:13px;padding:6px 12px;border-radius:8px;pointer-events:none;max-width:90%;text-align:center}
+  #hint.place{background:#b45309}
+  #back{display:none;font-size:13px;margin-bottom:10px}
+  #back a{color:#2563eb;text-decoration:none}
+  #scale{position:absolute;left:10px;bottom:10px;font-size:12px;color:var(--muted);background:rgba(255,255,255,.85);padding:3px 6px;border-radius:4px;pointer-events:none}
+  @media (max-width:760px){
+    #app{flex-direction:column;height:auto}
+    aside{width:auto;border-right:none;border-bottom:1px solid var(--line)}
+    main{height:75vh}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside>
+    <div id="back"><a href="../">← Kõik simulatsioonid</a></div>
+    <h1>Elektrivälja jõujooned</h1>
+
+    <h2>Uued laengud</h2>
+    <div class="row">
+      <label>Märk
+        <select id="signMode">
+          <option value="alt" selected>vahelduv (+ − + …)</option>
+          <option value="pos">kõik +</option>
+          <option value="neg">kõik −</option>
+        </select>
+      </label>
+    </div>
+    <h3>Punktlaengud</h3>
+    <div class="row">
+      <label>Arv <input type="number" id="count" min="1" max="12" value="2"></label>
+      <label>Suurus <input type="number" id="defQ" min="0.1" step="0.1" value="1"> <span class="unit">μC</span></label>
+    </div>
+    <div class="row"><button class="primary" id="create">Loo punktlaengud</button></div>
+    <div class="small" style="margin-bottom:6px">Asendab olemasolevad punktlaengud (tasandid jäävad). Seejärel klõpsa joonisel – iga klõps paigutab järgmise laengu.</div>
+
+    <h3>Laetud tasandid</h3>
+    <div class="row">
+      <label>Pinnalaengu tihedus σ <input type="number" id="defS" min="0.01" step="0.01" value="0.1"> <span class="unit">μC/m²</span></label>
+    </div>
+    <div class="row"><button class="primary" id="addPlane">+ Lisa tasand</button></div>
+    <div class="small" style="margin-bottom:6px">Tasandi paigutamiseks klõpsa joonisel selle algus- ja lõpp-punkt.</div>
+
+    <h2>Valmis paigutused</h2>
+    <div class="row">
+      <label title="Võrdkülgse kolmnurga ja ruudu külg; võrdhaarse kolmnurga alus">külg/alus a <input type="number" id="sideA" min="0.25" step="0.25" value="2"> <span class="unit">m</span></label>
+      <label title="Võrdhaarse kolmnurga haar">haar b <input type="number" id="legB" min="0.25" step="0.25" value="3"> <span class="unit">m</span></label>
+    </div>
+    <div class="row">
+      <label title="Tasandi pikkus (kaks tasandit ja üks tasand)">tasandi pikkus L <input type="number" id="planeL" min="0.25" step="0.25" value="5"> <span class="unit">m</span></label>
+      <label title="Kahe tasandi vahekaugus">vahe d <input type="number" id="gapD" min="0.25" step="0.25" value="1"> <span class="unit">m</span></label>
+    </div>
+    <h3>Punktlaengud <span class="small" style="font-weight:400">(suurus ja märk ülalt)</span></h3>
+    <div class="btns">
+      <button data-preset="tri-eq">Võrdkülgne kolmnurk</button>
+      <button data-preset="tri-iso">Võrdhaarne kolmnurk</button>
+      <button data-preset="square">Ruut</button>
+      <button data-preset="dipole">Dipool</button>
+    </div>
+    <h3>Tasandid <span class="small" style="font-weight:400">(σ ja märk ülalt)</span></h3>
+    <div class="btns">
+      <button data-preset="cap">Kaks vastasmärgilist tasandit</button>
+      <button data-preset="single">Üks tasand</button>
+      <button data-preset="ptri">Kolmnurk tasanditest</button>
+      <button data-preset="psq">Ruut tasanditest</button>
+    </div>
+    <div class="msg" id="presetMsg"></div>
+    <div class="small">Valmis paigutus asendab kõik praegused laengud. Kolmnurga ja ruudu puhul on a külje pikkus.</div>
+
+    <h2>Joonisel</h2>
+    <table><tbody id="list"></tbody></table>
+    <div class="row" style="margin-top:8px">
+      <button id="clearAll">Eemalda kõik</button>
+    </div>
+
+    <h2>Kuva</h2>
+    <label class="chk"><input type="checkbox" id="optAuto" checked> Jõujooned laengutelt</label>
+    <div class="row" style="margin-left:22px">
+      <label>tihedus <input type="range" id="density" min="4" max="32" step="1" value="16"></label>
+      <span class="small" id="densityVal">16</span>
+    </div>
+    <label class="chk"><input type="checkbox" id="optEqui"> Ekvipotentsiaalpinnad</label>
+    <div id="equiOpts" style="display:none;margin-left:22px">
+      <label class="chk"><input type="checkbox" id="optEquiFill" checked> Värvi potentsiaali järgi</label>
+      <div class="row">
+        <label>tihedus <input type="range" id="equiDensity" min="1" max="10" step="1" value="4"></label>
+        <span class="small" id="equiStep"></span>
+      </div>
+    </div>
+    <label class="chk"><input type="checkbox" id="optGrid"> Väljavektorite võrgustik (suund)</label>
+    <label class="chk"><input type="checkbox" id="optChain" checked> Näita vektorite liitmist (ahel)</label>
+    <label class="chk"><input type="checkbox" id="optSnap" checked> Joonda ruudustikule (0,25 m)</label>
+    <div class="row">
+      <label>Vektorite mõõtkava
+        <select id="scaleMode">
+          <option value="auto" selected>kohanduv</option>
+          <option value="fixed">fikseeritud</option>
+        </select>
+      </label>
+    </div>
+    <div class="row" id="fixedRow" style="display:none;margin-left:4px">
+      <input type="range" id="fixedScale" min="2" max="7" step="0.1" value="4">
+      <span class="small" id="fixedVal"></span>
+    </div>
+    <div class="row"><button id="clearLines">Kustuta minu joonistatud jõujooned</button></div>
+
+    <h2>Väli kursori kohas</h2>
+    <div id="readout"><div class="small">Vii kursor joonisele.</div></div>
+
+    <h2>Kasutamine</h2>
+    <div class="small">
+      • Klõps tühjale kohale – joonistab läbi selle punkti jõujoone (roosa).<br>
+      • Punktlaengut ja tasandit saab lohistada; tasandi otsapunkte (valged täpid) saab eraldi lohistada. Paremklõps eemaldab.<br>
+      • Kursori juures: iga laengu (või tasandi) väljatugevus <b>E<sub>i</sub></b> tema värviga ja summaarne väli <b>E</b> mustaga. Kriipsjoon näitab vektorite liitmist järjest.<br>
+      • Nooled näitavad välja suunda (+ → −). Punktlaengult lähtuvate joonte arv on võrdeline laenguga, tasandilt lähtuvate joonte tihedus pinnalaengu tihedusega σ.<br>
+      • <b>Tasand</b> on joonise tasandiga risti olev ühtlaselt laetud plaat, mis on joonisega risti suunas väga pikk; joonisel paistab see lõiguna. Lõpmatu tasandi lähedal E = σ/(2ε₀); kahe vastasmärgilise tasandi vahel on väli peaaegu homogeenne ja E ≈ σ/ε₀, kui tasandid on vahekaugusest palju pikemad (L ≫ d); servade juures on väli mittehomogeenne.<br>
+      • Ekvipotentsiaalpinnad paistavad joontena; naaberjoonte potentsiaalide vahe on ΔV. Punased toonid = positiivne potentsiaal, sinised = negatiivne, kriipsjoon = φ = 0. Ekvipotentsiaalid on risti jõujoontega.<br>
+      • Valemid: punktlaeng E = k|q|/r², φ = kq/r (φ = 0 lõpmatuses), k = 8,99·10⁹ N·m²/C², ε₀ = 1/(4πk). Joonisega risti lõpmatult pika tasandi potentsiaal lõpmatuses nulli ei lähe, seetõttu on tasandite potentsiaali nulltase valitud 10 m kaugusele. Vastasmärgiliste võrdsete tasandite korral see valik tulemust ei mõjuta.<br>
+      • Mõõtkava: 1 ruut = 0,5 m.
+    </div>
+  </aside>
+  <main id="main">
+    <canvas id="cv"></canvas>
+    <div id="hint"></div>
+    <div id="scale">1 ruut = 0,5 m</div>
+  </main>
+</div>
+
+<script>
+'use strict';
+const K = 8.9875517923e9;   // N·m²/C²
+const PPM = 100;            // pikslit meetri kohta
+const GRID_M = 0.5;
+const SNAP_M = 0.25;
+const CHARGE_R = 14;
+const PALETTE = ['#d97706','#059669','#7c3aed','#0891b2','#65a30d','#c2410c','#4f46e5','#0d9488','#a16207','#9333ea','#15803d','#b45309'];
+const USER_COLOR = '#db2777';
+const AUTO_COLOR = '#475569';
+const MAX_ITEMS = 16;
+const R0_M = 10;            // tasandite potentsiaali nulltaseme kaugus (m)
+
+const main = document.getElementById('main');
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+const layer = document.createElement('canvas'), lctx = layer.getContext('2d');
+const $ = id => document.getElementById(id);
+
+let W = 0, H = 0, DPR = 1;
+// items: {type:'point', q (μC), x, y} või {type:'plane', s (μC/m²), x1, y1, x2, y2}; koordinaadid meetrites, null = paigutamata
+let items = [];
+let seeds = [];            // kasutaja klõpsud [x,y] meetrites
+let autoLines = [], userLines = [];
+let linesDirty = true, drawPending = false;
+let hover = null;          // {x,y} pikslites
+let drag = null;
+const opts = { auto:true, density:16, grid:false, chain:true, snap:true, scaleMode:'auto', fixedLog:4,
+               equi:false, equiFill:true, equiDensity:4 };
+const EQ_RES = 2;
+const EQ_N = 24;
+let eqStep = 0;
+
+/* ---------- abifunktsioonid ---------- */
+const colorOf = i => PALETTE[i % PALETTE.length];
+const SUB = {'0':'₀','1':'₁','2':'₂','3':'₃','4':'₄','5':'₅','6':'₆','7':'₇','8':'₈','9':'₉'};
+const SUP = {'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+const sub = n => String(n).split('').map(c=>SUB[c]||c).join('');
+const sup = n => String(n).split('').map(c=>SUP[c]||c).join('');
+const comma = s => s.replace('.', ',');
+const minus = s => s.replace(/^-/, '−');
+const lbl = i => (items[i].type === 'point' ? 'q' : 'T') + sub(i + 1);
+const chargeOf = it => it.type === 'point' ? it.q : it.s;
+
+function fmtU(v, unit){
+  if (!isFinite(v)) return '∞';
+  if (v === 0) return '0 ' + unit;
+  let e = Math.floor(Math.log10(Math.abs(v)));
+  if (e >= 0 && e < 4) return minus(comma(v.toFixed(e >= 2 ? 0 : 1))) + ' ' + unit;
+  let m = v / Math.pow(10, e);
+  if (Math.abs(m) >= 9.995){ m /= 10; e += 1; }
+  return minus(comma(m.toFixed(2))) + '·10' + sup(e) + ' ' + unit;
+}
+const fmtE = v => fmtU(v, 'N/C');
+const fmtV = v => fmtU(v, 'V');
+function fmtM(v){ return minus(comma((Math.abs(v) < 0.005 ? 0 : v).toFixed(2))); }
+function fmtNum(v){ return comma(String(+Math.abs(v).toFixed(3))); }
+function fmtCharge(it){
+  const v = chargeOf(it);
+  return (v > 0 ? '+' : '−') + fmtNum(v) + (it.type === 'point' ? ' μC' : ' μC/m²');
+}
+function toPx(x, y){ return [W/2 + x*PPM, H/2 - y*PPM]; }
+function toWorld(px, py){ return [(px - W/2)/PPM, (H/2 - py)/PPM]; }
+function snap(v){ return opts.snap ? Math.round(v/SNAP_M)*SNAP_M : v; }
+function num(id, def){ const v = parseFloat(String($(id).value).replace(',', '.')); return isFinite(v) && v > 0 ? v : def; }
+const isPlaced = it => it.type === 'point' ? it.x !== null : it.x2 !== null;
+
+function placedPx(){
+  const out = [];
+  items.forEach((it, i) => {
+    if (!isPlaced(it)) return;
+    if (it.type === 'point'){
+      const [x, y] = toPx(it.x, it.y);
+      out.push({kind:'p', x, y, q:it.q, idx:i});
+    } else {
+      const [ax, ay] = toPx(it.x1, it.y1), [bx, by] = toPx(it.x2, it.y2);
+      const Lpx = Math.hypot(bx - ax, by - ay);
+      if (Lpx < 1) return;
+      const ux = (bx - ax)/Lpx, uy = (by - ay)/Lpx;
+      out.push({kind:'s', ax, ay, bx, by, ux, uy, nx:-uy, ny:ux, Lpx, Lm:Lpx/PPM, s:it.s, idx:i});
+    }
+  });
+  return out;
+}
+// Kaugus lõiguni (pikslites) ja lähim punkt
+function segDist(o, x, y){
+  let t = ((x - o.ax)*o.ux + (y - o.ay)*o.uy);
+  t = Math.max(0, Math.min(o.Lpx, t));
+  const cx = o.ax + o.ux*t, cy = o.ay + o.uy*t;
+  return [Math.hypot(x - cx, y - cy), cx, cy];
+}
+function objDist(o, x, y){ return o.kind === 'p' ? Math.hypot(x - o.x, y - o.y) - CHARGE_R : segDist(o, x, y)[0]; }
+
+/* ---------- füüsika ---------- */
+// Väli (N/C) ekraani telgedes (y alla).
+// Punktlaeng: E = kq/r².
+// Tasand: laius L joonise tasandis, joonisega risti lõpmatu, pinnalaengu tihedus σ.
+//   Lõigu suunas:  E_u = 2kσ·ln(r_A/r_B)
+//   Ristisuunas:   E_v = 2kσ·θ  (θ = nurk, mille all lõik punktist paistab; lõpmatu tasand: θ→π, E = σ/(2ε₀))
+function fieldOne(o, x, y){
+  if (o.kind === 'p'){
+    const dx = x - o.x, dy = y - o.y;
+    const r2 = dx*dx + dy*dy;
+    if (r2 < 1e-12) return [NaN, NaN];
+    const r = Math.sqrt(r2);
+    const E = K * o.q * 1e-6 / (r2 / (PPM*PPM));
+    return [E*dx/r, E*dy/r];
+  }
+  const rx = x - o.ax, ry = y - o.ay;
+  const u = (rx*o.ux + ry*o.uy)/PPM, v = (rx*o.nx + ry*o.ny)/PPM, L = o.Lm;
+  const rA2 = u*u + v*v, rB2 = (u - L)*(u - L) + v*v;
+  if (rA2 < 1e-14 || rB2 < 1e-14) return [NaN, NaN];
+  const c = 2 * K * o.s * 1e-6;
+  const Eu = c * 0.5 * Math.log(rA2 / rB2);
+  const Ev = c * (Math.atan2(v, u - L) - Math.atan2(v, u));
+  return [Eu*o.ux + Ev*o.nx, Eu*o.uy + Ev*o.ny];
+}
+function fieldAt(P, x, y){
+  let ex = 0, ey = 0;
+  for (const o of P){ const f = fieldOne(o, x, y); ex += f[0]; ey += f[1]; }
+  return [ex, ey];
+}
+// Potentsiaal. Punktlaeng: kq/r. Tasand: −2kσ·∫ln(ρ/R0)du.
+function Fint(s, v){
+  const s2v2 = s*s + v*v;
+  if (s2v2 < 1e-24) return 0;
+  return 0.5*s*Math.log(s2v2) - s + (Math.abs(v) < 1e-12 ? 0 : v*Math.atan(s/v));
+}
+function potOne(o, x, y){
+  if (o.kind === 'p'){
+    const r = Math.hypot(x - o.x, y - o.y) / PPM;
+    return r < 1e-9 ? Math.sign(o.q) * 1e15 : K * o.q * 1e-6 / r;
+  }
+  const rx = x - o.ax, ry = y - o.ay;
+  const u = (rx*o.ux + ry*o.uy)/PPM, v = (rx*o.nx + ry*o.ny)/PPM;
+  // nulltase R0 = 10 m kaugusel (joonisega risti lõpmatu tasandi potentsiaal lõpmatuses nulli ei lähe)
+  return -2 * K * o.s * 1e-6 * (Fint(u, v) - Fint(u - o.Lm, v) - o.Lm * Math.log(R0_M));
+}
+function potAt(P, x, y){ let v = 0; for (const o of P) v += potOne(o, x, y); return v; }
+
+function dirAt(P, x, y, s){
+  const f = fieldAt(P, x, y);
+  const m = Math.hypot(f[0], f[1]);
+  if (!(m > 0) || !isFinite(m)) return null;
+  return [s*f[0]/m, s*f[1]/m];
+}
+function segIntersect(x1, y1, x2, y2, o){
+  const dx = x2 - x1, dy = y2 - y1, ex = o.bx - o.ax, ey = o.by - o.ay;
+  const den = dx*ey - dy*ex;
+  if (Math.abs(den) < 1e-12) return null;
+  const t = ((o.ax - x1)*ey - (o.ay - y1)*ex) / den;
+  const w = ((o.ax - x1)*dy - (o.ay - y1)*dx) / den;
+  if (t < 0 || t > 1 || w < 0 || w > 1) return null;
+  return [x1 + dx*t, y1 + dy*t];
+}
+// Jõujoone jälgimine RK4-ga. s = +1 piki välja, −1 vastu välja.
+function trace(P, x0, y0, s){
+  const pts = [[x0, y0]];
+  let x = x0, y = y0, pdx = 0, pdy = 0;
+  const M = Math.max(W, H);
+  const minX = -M, maxX = W + M, minY = -M, maxY = H + M;
+  const strips = P.filter(o => o.kind === 's');
+  for (let i = 0; i < 9000; i++){
+    let dmin = Infinity;
+    for (const o of P){
+      if (o.kind === 'p'){
+        const d = Math.hypot(x - o.x, y - o.y);
+        if (d < 5){ pts.push([o.x, o.y]); return pts; }
+        if (d < dmin) dmin = d;
+      } else {
+        const [d, cx, cy] = segDist(o, x, y);
+        if (o.s * s < 0 && d < 1){ pts.push([cx, cy]); return pts; }   // jõudis vastasmärgilisele tasandile
+        if (d < dmin) dmin = d;
+      }
+    }
+    const ds = Math.min(4, Math.max(0.4, dmin * 0.08));
+    const k1 = dirAt(P, x, y, s); if (!k1) break;
+    if (i > 0 && k1[0]*pdx + k1[1]*pdy < 0.7) break;   // nullpunkt (väli pöördub järsult)
+    const k2 = dirAt(P, x + k1[0]*ds/2, y + k1[1]*ds/2, s); if (!k2) break;
+    const k3 = dirAt(P, x + k2[0]*ds/2, y + k2[1]*ds/2, s); if (!k3) break;
+    const k4 = dirAt(P, x + k3[0]*ds,   y + k3[1]*ds,   s); if (!k4) break;
+    const nx = x + ds * (k1[0] + 2*k2[0] + 2*k3[0] + k4[0]) / 6;
+    const ny = y + ds * (k1[1] + 2*k2[1] + 2*k3[1] + k4[1]) / 6;
+    if (Math.hypot(nx - x, ny - y) < 0.2*ds) break;   // nullpunkt: sammud tühistavad üksteist
+    for (const o of strips){
+      const hit = segIntersect(x, y, nx, ny, o);
+      if (hit){ pts.push(hit); return pts; }
+    }
+    x = nx; y = ny; pdx = k1[0]; pdy = k1[1];
+    pts.push([x, y]);
+    if (x < minX || x > maxX || y < minY || y > maxY) break;
+  }
+  return pts;
+}
+
+function computeLines(){
+  const P = placedPx();
+  autoLines = []; userLines = [];
+  if (!P.length) return;
+  if (opts.auto){
+    // Jooned alustatakse ülekaalus oleva märgiga laengutelt, et iga joon joonistuks ühe korra.
+    const net = P.reduce((a, o) => a + (o.kind === 'p' ? o.q : o.s * o.Lm), 0);
+    const sg = net >= 0 ? 1 : -1;
+    const pts = P.filter(o => o.kind === 'p'), sts = P.filter(o => o.kind === 's');
+    const qmax = pts.length ? Math.max(...pts.map(o => Math.abs(o.q))) : 1;
+    const smax = sts.length ? Math.max(...sts.map(o => Math.abs(o.s))) : 1;
+    for (const o of P){
+      const val = o.kind === 'p' ? o.q : o.s;
+      if (Math.sign(val) !== sg) continue;
+      if (o.kind === 'p'){
+        const n = Math.max(1, Math.round(opts.density * Math.abs(o.q) / qmax));
+        for (let k = 0; k < n; k++){
+          const a = 2*Math.PI*k/n;
+          const line = trace(P, o.x + CHARGE_R*Math.cos(a), o.y + CHARGE_R*Math.sin(a), sg);
+          line.unshift([o.x, o.y]);
+          if (sg < 0) line.reverse();
+          autoLines.push(line);
+        }
+      } else {
+        const spacing = (450 / opts.density) * smax / Math.abs(o.s);
+        const n = Math.max(1, Math.round(o.Lpx / spacing));
+        for (const side of [1, -1]){
+          for (let k = 0; k < n; k++){
+            const t = (k + 0.5) / n;
+            const px = o.ax + (o.bx - o.ax)*t, py = o.ay + (o.by - o.ay)*t;
+            const line = trace(P, px + side*o.nx*2.5, py + side*o.ny*2.5, sg);
+            line.unshift([px, py]);
+            if (sg < 0) line.reverse();
+            autoLines.push(line);
+          }
+        }
+      }
+    }
+  }
+  for (const sd of seeds){
+    const [x, y] = toPx(sd[0], sd[1]);
+    if (P.some(o => objDist(o, x, y) < 1)) continue;
+    const f = trace(P, x, y, 1), b = trace(P, x, y, -1);
+    userLines.push(b.reverse().concat(f.slice(1)));
+  }
+}
+
+/* ---------- ekvipotentsiaalid ---------- */
+function niceStep(v){
+  const e = Math.floor(Math.log10(v)), f = v / Math.pow(10, e);
+  return (f < 1.5 ? 1 : f < 3.5 ? 2 : f < 7.5 ? 5 : 10) * Math.pow(10, e);
+}
+function bandRGB(b){
+  b = Math.max(-EQ_N, Math.min(EQ_N - 1, b));
+  const pos = b >= 0, t = pos ? (b + 1) / EQ_N : -b / EQ_N;
+  const base = pos ? [220, 38, 38] : [37, 99, 235];
+  const a = 0.07 + 0.6 * t + ((b & 1) ? 0.025 : 0);
+  return base.map(ch => Math.round(255 + (ch - 255) * a));
+}
+function drawEquipotentials(g, P){
+  const refs = [];
+  const pts = P.filter(o => o.kind === 'p'), sts = P.filter(o => o.kind === 's');
+  if (pts.length) refs.push(K * Math.max(...pts.map(o => Math.abs(o.q))) * 1e-6 / 1.0);          // φ 1 m kaugusel
+  if (sts.length) refs.push(4 * Math.PI * K * Math.max(...sts.map(o => Math.abs(o.s))) * 1e-6 * 1.0); // (σ/ε₀)·1 m
+  eqStep = niceStep(Math.min(...refs) / opts.equiDensity);
+  $('equiStep').textContent = 'ΔV = ' + fmtV(eqStep);
+  const R = drag ? 2*EQ_RES : EQ_RES, gw = Math.ceil(W / R) + 1, gh = Math.ceil(H / R) + 1;
+  const V = new Float64Array(gw * gh);
+  for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) V[j*gw + i] = potAt(P, i*R, j*R);
+
+  if (opts.equiFill){
+    const off = document.createElement('canvas'); off.width = gw; off.height = gh;
+    const oc = off.getContext('2d'), img = oc.createImageData(gw, gh);
+    const lut = [];
+    for (let b = -EQ_N; b < EQ_N; b++) lut.push(bandRGB(b));
+    for (let k = 0; k < gw*gh; k++){
+      const b = Math.max(-EQ_N, Math.min(EQ_N - 1, Math.floor(V[k] / eqStep)));
+      const c = lut[b + EQ_N];
+      img.data[4*k] = c[0]; img.data[4*k+1] = c[1]; img.data[4*k+2] = c[2]; img.data[4*k+3] = 255;
+    }
+    oc.putImageData(img, 0, 0);
+    g.save(); g.imageSmoothingEnabled = false;
+    g.drawImage(off, 0, 0, gw, gh, -R/2, -R/2, gw*R, gh*R);
+    g.restore();
+  }
+  const lines = new Path2D(), zero = new Path2D();
+  const seg = (path, a, b) => { path.moveTo(a[0], a[1]); path.lineTo(b[0], b[1]); };
+  for (let j = 0; j < gh - 1; j++){
+    for (let i = 0; i < gw - 1; i++){
+      const v0 = V[j*gw + i], v1 = V[j*gw + i + 1], v2 = V[(j+1)*gw + i + 1], v3 = V[(j+1)*gw + i];
+      const mn = Math.min(v0, v1, v2, v3), mx = Math.max(v0, v1, v2, v3);
+      let lo = Math.ceil(mn / eqStep), hi = Math.floor(mx / eqStep);
+      lo = Math.max(lo, -EQ_N); hi = Math.min(hi, EQ_N);
+      if (lo > hi) continue;
+      const x0 = i*R, y0 = j*R, x1 = x0 + R, y1 = y0 + R;
+      for (let m = lo; m <= hi; m++){
+        const L = m * eqStep;
+        const idx = (v0 > L ? 8 : 0) | (v1 > L ? 4 : 0) | (v2 > L ? 2 : 0) | (v3 > L ? 1 : 0);
+        if (idx === 0 || idx === 15) continue;
+        const T = () => [x0 + R*(L - v0)/(v1 - v0), y0];
+        const Rt = () => [x1, y0 + R*(L - v1)/(v2 - v1)];
+        const B = () => [x0 + R*(L - v3)/(v2 - v3), y1];
+        const Lf = () => [x0, y0 + R*(L - v0)/(v3 - v0)];
+        const p = m === 0 ? zero : lines;
+        switch (idx){
+          case 1: case 14: seg(p, Lf(), B()); break;
+          case 2: case 13: seg(p, B(), Rt()); break;
+          case 3: case 12: seg(p, Lf(), Rt()); break;
+          case 4: case 11: seg(p, T(), Rt()); break;
+          case 6: case 9:  seg(p, T(), B()); break;
+          case 7: case 8:  seg(p, T(), Lf()); break;
+          case 5:  seg(p, T(), Lf()); seg(p, B(), Rt()); break;
+          case 10: seg(p, T(), Rt()); seg(p, Lf(), B()); break;
+        }
+      }
+    }
+  }
+  g.save();
+  g.lineWidth = 1; g.strokeStyle = 'rgba(30,41,59,0.45)'; g.stroke(lines);
+  g.lineWidth = 1.6; g.strokeStyle = 'rgba(30,41,59,0.75)'; g.setLineDash([6, 4]); g.stroke(zero);
+  g.restore();
+}
+function drawEquiLegend(g){
+  const n = 2*EQ_N, bw = 6, bh = 12, x0 = W - n*bw - 16, y0 = H - 46;
+  g.save();
+  g.fillStyle = 'rgba(255,255,255,0.9)';
+  if (!opts.equiFill){
+    g.fillRect(W - 190, H - 34, 180, 24);
+    g.font = '11px system-ui, sans-serif'; g.fillStyle = '#374151'; g.textAlign = 'right'; g.textBaseline = 'middle';
+    g.fillText('Ekvipotentsiaalid: ΔV = ' + fmtV(eqStep), W - 18, H - 22);
+    g.restore(); return;
+  }
+  g.fillRect(x0 - 8, y0 - 22, n*bw + 16, 62);
+  g.font = '11px system-ui, sans-serif'; g.fillStyle = '#374151'; g.textBaseline = 'alphabetic';
+  g.textAlign = 'left'; g.fillText('Potentsiaal φ, ΔV = ' + fmtV(eqStep), x0, y0 - 8);
+  for (let k = 0; k < n; k++){
+    const c = bandRGB(k - EQ_N);
+    g.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
+    g.fillRect(x0 + k*bw, y0, bw, bh);
+  }
+  g.strokeStyle = 'rgba(30,41,59,0.45)'; g.lineWidth = 1; g.strokeRect(x0 + .5, y0 + .5, n*bw - 1, bh - 1);
+  g.fillStyle = '#374151'; g.textBaseline = 'top';
+  g.textAlign = 'left';   g.fillText('≤ ' + fmtV(-EQ_N*eqStep), x0, y0 + bh + 3);
+  g.textAlign = 'center'; g.fillText('0', x0 + EQ_N*bw, y0 + bh + 3);
+  g.textAlign = 'right';  g.fillText('≥ ' + fmtV(EQ_N*eqStep), x0 + n*bw, y0 + bh + 3);
+  g.restore();
+}
+
+/* ---------- joonistamine ---------- */
+function arrowHead(g, x, y, ux, uy, size, color){
+  g.fillStyle = color;
+  g.beginPath();
+  g.moveTo(x + ux*size*0.6, y + uy*size*0.6);
+  g.lineTo(x - ux*size*0.6 - uy*size*0.45, y - uy*size*0.6 + ux*size*0.45);
+  g.lineTo(x - ux*size*0.6 + uy*size*0.45, y - uy*size*0.6 - ux*size*0.45);
+  g.closePath(); g.fill();
+}
+function drawFieldLine(g, pts, color, width, spacing, P){
+  if (pts.length < 2) return;
+  g.strokeStyle = color; g.lineWidth = width; g.lineJoin = 'round';
+  g.beginPath(); g.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+  g.stroke();
+  let L = 0;
+  for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i][0]-pts[i-1][0], pts[i][1]-pts[i-1][1]);
+  let next = L < spacing ? L/2 : spacing/2, acc = 0;
+  for (let i = 1; i < pts.length; i++){
+    const dx = pts[i][0]-pts[i-1][0], dy = pts[i][1]-pts[i-1][1];
+    const seg = Math.hypot(dx, dy);
+    if (seg === 0) continue;
+    while (acc + seg >= next){
+      const t = (next - acc)/seg;
+      const ax = pts[i-1][0] + dx*t, ay = pts[i-1][1] + dy*t;
+      const inView = ax > -10 && ax < W+10 && ay > -10 && ay < H+10;
+      const far = P.every(o => objDist(o, ax, ay) > 12);
+      if (inView && far) arrowHead(g, ax, ay, dx/seg, dy/seg, 6 + width*2, color);
+      next += spacing;
+    }
+    acc += seg;
+  }
+}
+function drawGrid(g){
+  const step = GRID_M*PPM;
+  g.lineWidth = 1;
+  g.strokeStyle = 'rgba(15,23,42,0.07)';
+  g.beginPath();
+  for (let x = W/2 % step; x < W; x += step){ g.moveTo(Math.round(x)+.5, 0); g.lineTo(Math.round(x)+.5, H); }
+  for (let y = H/2 % step; y < H; y += step){ g.moveTo(0, Math.round(y)+.5); g.lineTo(W, Math.round(y)+.5); }
+  g.stroke();
+  g.strokeStyle = 'rgba(15,23,42,0.17)';
+  g.beginPath();
+  g.moveTo(Math.round(W/2)+.5, 0); g.lineTo(Math.round(W/2)+.5, H);
+  g.moveTo(0, Math.round(H/2)+.5); g.lineTo(W, Math.round(H/2)+.5);
+  g.stroke();
+}
+function drawVectorGrid(g, P){
+  const step = 40, len = 14;
+  for (let x = step/2; x < W; x += step){
+    for (let y = step/2; y < H; y += step){
+      if (P.some(o => objDist(o, x, y) < 8)) continue;
+      const f = fieldAt(P, x, y); const m = Math.hypot(f[0], f[1]);
+      if (!(m > 0) || !isFinite(m)) continue;
+      const ux = f[0]/m, uy = f[1]/m;
+      const a = Math.max(0.15, Math.min(0.85, 0.15 + 0.14*(Math.log10(m) - 2)));
+      const col = `rgba(100,116,139,${a.toFixed(2)})`;
+      g.strokeStyle = col; g.lineWidth = 1.2;
+      g.beginPath(); g.moveTo(x - ux*len/2, y - uy*len/2); g.lineTo(x + ux*len/2, y + uy*len/2); g.stroke();
+      arrowHead(g, x + ux*len/2, y + uy*len/2, ux, uy, 6, col);
+    }
+  }
+}
+function renderLayer(){
+  lctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  lctx.fillStyle = '#fff'; lctx.fillRect(0, 0, W, H);
+  const P = placedPx();
+  if (opts.equi && P.length) drawEquipotentials(lctx, P);
+  drawGrid(lctx);
+  if (opts.grid && P.length) drawVectorGrid(lctx, P);
+  for (const l of autoLines) drawFieldLine(lctx, l, AUTO_COLOR, 1.3, 110, P);
+  for (const l of userLines) drawFieldLine(lctx, l, USER_COLOR, 2.4, 120, P);
+}
+function drawCharge(g, x, y, q, idx, alpha){
+  g.save(); g.globalAlpha = alpha;
+  const r = CHARGE_R;
+  g.beginPath(); g.arc(x, y, r + 2.5, 0, 2*Math.PI); g.fillStyle = colorOf(idx); g.fill();
+  const grd = g.createRadialGradient(x - r*0.35, y - r*0.35, 2, x, y, r);
+  grd.addColorStop(0, q > 0 ? '#f87171' : '#60a5fa'); grd.addColorStop(1, q > 0 ? '#b91c1c' : '#1d4ed8');
+  g.beginPath(); g.arc(x, y, r, 0, 2*Math.PI); g.fillStyle = grd; g.fill();
+  g.strokeStyle = '#fff'; g.lineWidth = 2.4; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(x - 6, y); g.lineTo(x + 6, y);
+  if (q > 0){ g.moveTo(x, y - 6); g.lineTo(x, y + 6); }
+  g.stroke();
+  g.font = '600 12px system-ui, sans-serif'; g.fillStyle = colorOf(idx);
+  g.textAlign = 'left'; g.textBaseline = 'top';
+  g.fillText('q' + sub(idx + 1), x + r + 2, y + r - 4);
+  g.restore();
+}
+function drawPlane(g, ax, ay, bx, by, s, idx, alpha){
+  const L = Math.hypot(bx - ax, by - ay);
+  g.save(); g.globalAlpha = alpha; g.lineCap = 'round';
+  g.strokeStyle = colorOf(idx); g.lineWidth = 12;
+  g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke();
+  g.strokeStyle = s > 0 ? '#dc2626' : '#2563eb'; g.lineWidth = 7;
+  g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke();
+  if (L > 1){
+    const ux = (bx - ax)/L, uy = (by - ay)/L;
+    g.strokeStyle = '#fff'; g.lineWidth = 1.6; g.lineCap = 'butt';
+    const n = Math.max(1, Math.floor(L / 28));
+    g.beginPath();
+    for (let k = 0; k < n; k++){
+      const t = (k + 0.5) / n, cx = ax + (bx - ax)*t, cy = ay + (by - ay)*t;
+      g.moveTo(cx - ux*2.6, cy - uy*2.6); g.lineTo(cx + ux*2.6, cy + uy*2.6);
+      if (s > 0){ g.moveTo(cx + uy*2.6, cy - ux*2.6); g.lineTo(cx - uy*2.6, cy + ux*2.6); }
+    }
+    g.stroke();
+    for (const [ex, ey] of [[ax, ay], [bx, by]]){
+      g.beginPath(); g.arc(ex, ey, 4.5, 0, 2*Math.PI);
+      g.fillStyle = '#fff'; g.fill(); g.strokeStyle = '#1f2937'; g.lineWidth = 1.4; g.stroke();
+    }
+    const mx = (ax + bx)/2, my = (ay + by)/2;
+    let nx = -uy, ny = ux; if (ny > 0 || (ny === 0 && nx < 0)){ nx = -nx; ny = -ny; }
+    g.font = '600 12px system-ui, sans-serif'; g.fillStyle = colorOf(idx);
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,.9)';
+    const lx = mx + nx*16 + ux*0, ly = my + ny*16;
+    g.strokeText('T' + sub(idx + 1), lx, ly); g.fillText('T' + sub(idx + 1), lx, ly);
+  }
+  g.restore();
+}
+function drawArrow(g, x1, y1, x2, y2, color, width, dashed){
+  const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy);
+  if (!(L > 1)) return;
+  const ux = dx/L, uy = dy/L, hs = 7 + width*2;
+  g.save();
+  g.strokeStyle = color; g.lineWidth = width; g.lineCap = 'round';
+  if (dashed) g.setLineDash([5, 4]);
+  g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2 - ux*hs*0.7, y2 - uy*hs*0.7); g.stroke();
+  g.setLineDash([]);
+  if (dashed) g.globalAlpha = 0.7;
+  g.fillStyle = color;
+  g.beginPath(); g.moveTo(x2, y2);
+  g.lineTo(x2 - ux*hs - uy*hs*0.42, y2 - uy*hs + ux*hs*0.42);
+  g.lineTo(x2 - ux*hs + uy*hs*0.42, y2 - uy*hs - ux*hs*0.42);
+  g.closePath(); g.fill();
+  g.restore();
+}
+function label(g, text, x, y, color){
+  g.save();
+  g.font = '700 13px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.lineWidth = 4; g.strokeStyle = 'rgba(255,255,255,.9)'; g.strokeText(text, x, y);
+  g.fillStyle = color; g.fillText(text, x, y);
+  g.restore();
+}
+const worldAngle = (ex, ey) => { let a = Math.atan2(-ey, ex) * 180/Math.PI; if (a < 0) a += 360; return a; };
+
+function drawHover(g, P){
+  const ro = $('readout');
+  if (!hover || !P.length || drag){
+    ro.innerHTML = P.length ? '<div class="small">Vii kursor joonisele.</div>' : '<div class="small">Paiguta esmalt laengud.</div>';
+    return;
+  }
+  const {x, y} = hover;
+  const [wx, wy] = toWorld(x, y);
+  if (P.some(o => objDist(o, x, y) < 2)){
+    ro.innerHTML = '<div class="small">Kursor on laengu peal – seal pole väli määratud.</div>';
+    return;
+  }
+  const comps = P.map(o => fieldOne(o, x, y));
+  const sum = comps.reduce((a, f) => [a[0] + f[0], a[1] + f[1]], [0, 0]);
+  const mags = comps.map(f => Math.hypot(f[0], f[1]));
+  const ms = Math.hypot(sum[0], sum[1]);
+  let s;
+  if (opts.scaleMode === 'auto') s = 120 / Math.max(ms, ...mags);
+  else s = 100 / Math.pow(10, opts.fixedLog);
+  const scaleText = '100 px ≙ ' + fmtE(100 / s);
+
+  if (P.length > 1){
+    comps.forEach((f, i) => drawArrow(g, x, y, x + f[0]*s, y + f[1]*s, colorOf(P[i].idx), 2, false));
+    if (opts.chain){
+      let cx = x + comps[0][0]*s, cy = y + comps[0][1]*s;
+      for (let i = 1; i < comps.length; i++){
+        const nx = cx + comps[i][0]*s, ny = cy + comps[i][1]*s;
+        drawArrow(g, cx, cy, nx, ny, colorOf(P[i].idx), 1.4, true);
+        cx = nx; cy = ny;
+      }
+    }
+    comps.forEach((f, i) => {
+      const L = mags[i]*s;
+      if (L < 18) return;
+      const ux = f[0]/mags[i], uy = f[1]/mags[i];
+      label(g, 'E' + sub(P[i].idx + 1), x + f[0]*s + ux*12 - uy*10, y + f[1]*s + uy*12 + ux*10, colorOf(P[i].idx));
+    });
+  }
+  drawArrow(g, x, y, x + sum[0]*s, y + sum[1]*s, '#111827', 3.2, false);
+  if (ms*s > 14) label(g, 'E', x + sum[0]*s + sum[0]/ms*14, y + sum[1]*s + sum[1]/ms*14, '#111827');
+  g.fillStyle = '#111827'; g.beginPath(); g.arc(x, y, 3, 0, 2*Math.PI); g.fill();
+
+  let html = `<div class="small" style="margin-bottom:6px">Punkt: x = ${fmtM(wx)} m, y = ${fmtM(wy)} m<br>Mõõtkava: ${scaleText}</div><table>`;
+  if (P.length > 1){
+    comps.forEach((f, i) => {
+      const o = P[i];
+      html += `<tr><td><span class="dot" style="background:${colorOf(o.idx)}"></span>E${sub(o.idx+1)} <span class="small">(${lbl(o.idx)})</span></td><td>${fmtE(mags[i])}</td><td>${comma(worldAngle(f[0], f[1]).toFixed(0))}°</td></tr>`;
+    });
+  }
+  html += `<tr class="tot"><td><span class="dot" style="background:#111827"></span>E</td><td>${fmtE(ms)}</td><td>${ms > 0 ? comma(worldAngle(sum[0], sum[1]).toFixed(0)) + '°' : '–'}</td></tr></table>`;
+  html += `<div style="margin-top:6px">Potentsiaal: <b>φ = ${fmtV(potAt(P, x, y))}</b></div>`;
+  html += '<div class="small" style="margin-top:4px">Nurk on mõõdetud x-telje positiivsest suunast vastupäeva.</div>';
+  ro.innerHTML = html;
+}
+
+function draw(){
+  drawPending = false;
+  if (linesDirty){ computeLines(); renderLayer(); linesDirty = false; }
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  ctx.drawImage(layer, 0, 0, W, H);
+  const P = placedPx();
+  if (opts.equi && P.length && eqStep > 0) drawEquiLegend(ctx);
+  for (const o of P) if (o.kind === 's') drawPlane(ctx, o.ax, o.ay, o.bx, o.by, o.s, o.idx, 1);
+  for (const o of P) if (o.kind === 'p') drawCharge(ctx, o.x, o.y, o.q, o.idx, 1);
+  const ni = items.findIndex(it => !isPlaced(it));
+  if (ni >= 0 && hover && !drag){
+    const it = items[ni];
+    const [wx, wy] = toWorld(hover.x, hover.y);
+    const [gx, gy] = toPx(snap(wx), snap(wy));
+    if (it.type === 'point') drawCharge(ctx, gx, gy, it.q, ni, 0.45);
+    else if (it.x1 === null){
+      ctx.save(); ctx.globalAlpha = 0.6; ctx.fillStyle = it.s > 0 ? '#dc2626' : '#2563eb';
+      ctx.beginPath(); ctx.arc(gx, gy, 5, 0, 2*Math.PI); ctx.fill(); ctx.restore();
+    } else {
+      const [ax, ay] = toPx(it.x1, it.y1);
+      drawPlane(ctx, ax, ay, gx, gy, it.s, ni, 0.5);
+    }
+  } else {
+    drawHover(ctx, P);
+  }
+}
+function requestDraw(){ if (!drawPending){ drawPending = true; requestAnimationFrame(draw); } }
+function dirty(){ linesDirty = true; requestDraw(); }
+
+/* ---------- loend ja vihjed ---------- */
+function renderList(){
+  const tb = $('list');
+  tb.innerHTML = '';
+  if (!items.length){ tb.innerHTML = '<tr><td class="small">Laenguid pole.</td></tr>'; }
+  items.forEach((it, i) => {
+    const v = chargeOf(it);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="white-space:nowrap"><span class="dot" style="background:${colorOf(i)}"></span>${lbl(i)}</td>
+      <td><button class="sign ${v > 0 ? 'p' : 'n'}" title="Muuda märki">${v > 0 ? '+' : '−'}</button></td>
+      <td style="white-space:nowrap"><input type="number" min="0.01" step="${it.type === 'point' ? 0.1 : 0.01}" value="${+Math.abs(v).toFixed(3)}"> <span class="unit">${it.type === 'point' ? 'μC' : 'μC/m²'}</span></td>
+      <td class="pos" data-i="${i}"></td>
+      <td><button class="del" title="Eemalda">✕</button></td>`;
+    tr.querySelector('.sign').onclick = () => {
+      if (it.type === 'point') it.q = -it.q; else it.s = -it.s;
+      renderList(); dirty();
+    };
+    tr.querySelector('input').oninput = e => {
+      const nv = parseFloat(String(e.target.value).replace(',', '.'));
+      if (nv > 0){
+        if (it.type === 'point') it.q = Math.sign(it.q) * nv; else it.s = Math.sign(it.s) * nv;
+        updateHint(); dirty();
+      }
+    };
+    tr.querySelector('.del').onclick = () => { items.splice(i, 1); renderList(); dirty(); };
+    tb.appendChild(tr);
+  });
+  updatePositions(); updateHint();
+}
+function updatePositions(){
+  document.querySelectorAll('#list .pos').forEach(td => {
+    const it = items[+td.dataset.i];
+    if (!it) return;
+    if (!isPlaced(it)){ td.textContent = 'paigutamata'; td.classList.add('un'); return; }
+    td.classList.remove('un');
+    if (it.type === 'point') td.textContent = `(${fmtM(it.x)}; ${fmtM(it.y)}) m`;
+    else td.textContent = `L = ${fmtM(Math.hypot(it.x2 - it.x1, it.y2 - it.y1))} m`;
+  });
+}
+function updateHint(){
+  const h = $('hint');
+  const i = items.findIndex(it => !isPlaced(it));
+  if (i >= 0){
+    const it = items[i];
+    h.className = 'place';
+    if (it.type === 'point') h.textContent = `Klõpsa joonisel, et paigutada laeng ${lbl(i)} (${fmtCharge(it)})`;
+    else if (it.x1 === null) h.textContent = `Klõpsa tasandi ${lbl(i)} (${fmtCharge(it)}) algpunkt`;
+    else h.textContent = `Klõpsa tasandi ${lbl(i)} lõpp-punkt`;
+  } else if (!items.length){
+    h.className = '';
+    h.textContent = 'Lisa vasakul paneelil laengud või vali valmis paigutus.';
+  } else {
+    h.className = '';
+    h.textContent = 'Klõps tühjale kohale joonistab jõujoone · lohista laengut või tasandit · paremklõps eemaldab';
+  }
+}
+function signFor(i){
+  const m = $('signMode').value;
+  return m === 'pos' ? 1 : m === 'neg' ? -1 : (i % 2 === 0 ? 1 : -1);
+}
+
+/* ---------- valmis paigutused ---------- */
+function setMsg(t){ $('presetMsg').textContent = t || ''; }
+function preset(kind){
+  setMsg('');
+  const a = num('sideA', 2), b = num('legB', 3), d = num('gapD', 1), L = num('planeL', 5);
+  const q = num('defQ', 1), s = num('defS', 0.1);
+  const P = (x, y, i) => ({type:'point', q: signFor(i)*q, x, y});
+  const S = (p1, p2, sign) => ({type:'plane', s: sign*s, x1:p1[0], y1:p1[1], x2:p2[0], y2:p2[1]});
+  const eqTri = () => { const R = a/Math.sqrt(3); return [90, 210, 330].map(t => [R*Math.cos(t*Math.PI/180), R*Math.sin(t*Math.PI/180)]); };
+  const sq = () => [[-a/2, a/2], [a/2, a/2], [a/2, -a/2], [-a/2, -a/2]];
+  let next = [];
+  switch (kind){
+    case 'tri-eq': next = eqTri().map((p, i) => P(p[0], p[1], i)); break;
+    case 'tri-iso': {
+      if (b <= a/2){ setMsg('Võrdhaarse kolmnurga haar b peab olema suurem kui pool alusest (b > a/2).'); return; }
+      const h = Math.sqrt(b*b - a*a/4);
+      next = [[0, h/2], [-a/2, -h/2], [a/2, -h/2]].map((p, i) => P(p[0], p[1], i));
+      break;
+    }
+    case 'square': next = sq().map((p, i) => P(p[0], p[1], i)); break;
+    case 'dipole': next = [P(-a/2, 0, 0), {type:'point', q: -signFor(0)*q, x: a/2, y: 0}]; break;
+    case 'cap':
+      next = [S([-d/2, -L/2], [-d/2, L/2], 1), S([d/2, -L/2], [d/2, L/2], -1)];
+      break;
+    case 'single': next = [S([-L/2, 0], [L/2, 0], signFor(0))]; break;
+    case 'ptri': { const v = eqTri(); next = [0, 1, 2].map(i => S(v[i], v[(i+1)%3], signFor(i))); break; }
+    case 'psq':  { const v = sq();    next = [0, 1, 2, 3].map(i => S(v[i], v[(i+1)%4], signFor(i))); break; }
+  }
+  items = next; seeds = [];
+  renderList(); dirty();
+}
+document.querySelectorAll('[data-preset]').forEach(btn => btn.onclick = () => preset(btn.dataset.preset));
+
+/* ---------- hiir / puude ---------- */
+function evPos(e){ const r = cv.getBoundingClientRect(); return {x: e.clientX - r.left, y: e.clientY - r.top}; }
+function hitTest(x, y){
+  const P = placedPx();
+  for (let i = P.length - 1; i >= 0; i--){
+    const o = P[i];
+    if (o.kind === 'p' && Math.hypot(o.x - x, o.y - y) < CHARGE_R + 4) return {it: items[o.idx], mode:'point'};
+  }
+  for (let i = P.length - 1; i >= 0; i--){
+    const o = P[i];
+    if (o.kind !== 's') continue;
+    if (Math.hypot(o.ax - x, o.ay - y) < 9) return {it: items[o.idx], mode:'end1'};
+    if (Math.hypot(o.bx - x, o.by - y) < 9) return {it: items[o.idx], mode:'end2'};
+  }
+  for (let i = P.length - 1; i >= 0; i--){
+    const o = P[i];
+    if (o.kind === 's' && segDist(o, x, y)[0] < 8) return {it: items[o.idx], mode:'move'};
+  }
+  return null;
+}
+function occupied(wx, wy, except){
+  return items.some(c => c !== except && c.type === 'point' && c.x !== null && Math.hypot(c.x - wx, c.y - wy)*PPM < 2*CHARGE_R);
+}
+cv.addEventListener('pointerdown', e => {
+  if (e.button === 2) return;
+  const p = evPos(e); hover = p;
+  const [wx, wy] = toWorld(p.x, p.y);
+  const hit = hitTest(p.x, p.y);
+  if (hit){
+    drag = hit;
+    if (hit.mode === 'move') drag.start = {wx, wy, x1: hit.it.x1, y1: hit.it.y1, x2: hit.it.x2, y2: hit.it.y2};
+    cv.setPointerCapture(e.pointerId); cv.style.cursor = 'grabbing'; requestDraw(); return;
+  }
+  const it = items.find(c => !isPlaced(c));
+  if (it){
+    const sx = snap(wx), sy = snap(wy);
+    if (it.type === 'point'){
+      if (!occupied(sx, sy, null)){ it.x = sx; it.y = sy; }
+    } else if (it.x1 === null){
+      it.x1 = sx; it.y1 = sy;
+    } else if (Math.hypot(sx - it.x1, sy - it.y1) >= 0.2){
+      it.x2 = sx; it.y2 = sy;
+    }
+    updatePositions(); updateHint(); dirty();
+    return;
+  }
+  if (items.some(isPlaced)){ seeds.push([wx, wy]); dirty(); }
+});
+cv.addEventListener('pointermove', e => {
+  const p = evPos(e); hover = p;
+  if (drag){
+    const [wx, wy] = toWorld(Math.max(0, Math.min(W, p.x)), Math.max(0, Math.min(H, p.y)));
+    const it = drag.it;
+    let changed = false;
+    if (drag.mode === 'point'){
+      const sx = snap(wx), sy = snap(wy);
+      if ((sx !== it.x || sy !== it.y) && !occupied(sx, sy, it)){ it.x = sx; it.y = sy; changed = true; }
+    } else if (drag.mode === 'end1' || drag.mode === 'end2'){
+      const sx = snap(wx), sy = snap(wy);
+      const ox = drag.mode === 'end1' ? it.x2 : it.x1, oy = drag.mode === 'end1' ? it.y2 : it.y1;
+      if (Math.hypot(sx - ox, sy - oy) >= 0.2){
+        if (drag.mode === 'end1'){ if (sx !== it.x1 || sy !== it.y1){ it.x1 = sx; it.y1 = sy; changed = true; } }
+        else { if (sx !== it.x2 || sy !== it.y2){ it.x2 = sx; it.y2 = sy; changed = true; } }
+      }
+    } else {
+      const st = drag.start;
+      const dx = snap(st.x1 + (wx - st.wx)) - st.x1, dy = snap(st.y1 + (wy - st.wy)) - st.y1;
+      if (st.x1 + dx !== it.x1 || st.y1 + dy !== it.y1){
+        it.x1 = st.x1 + dx; it.y1 = st.y1 + dy; it.x2 = st.x2 + dx; it.y2 = st.y2 + dy; changed = true;
+      }
+    }
+    if (changed){ updatePositions(); dirty(); }
+    return;
+  }
+  const h = hitTest(p.x, p.y);
+  const placing = items.some(c => !isPlaced(c));
+  cv.style.cursor = h ? (h.mode === 'end1' || h.mode === 'end2' ? 'move' : 'grab') : (placing ? 'copy' : 'crosshair');
+  requestDraw();
+});
+const endDrag = () => { if (drag){ drag = null; cv.style.cursor = 'grab'; dirty(); } };
+cv.addEventListener('pointerup', endDrag);
+cv.addEventListener('pointercancel', endDrag);
+cv.addEventListener('pointerleave', () => { if (!drag){ hover = null; requestDraw(); } });
+cv.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  const p = evPos(e);
+  const hit = hitTest(p.x, p.y);
+  if (hit){ items.splice(items.indexOf(hit.it), 1); renderList(); dirty(); }
+});
+
+/* ---------- juhtelemendid ---------- */
+$('create').onclick = () => {
+  setMsg('');
+  const planes = items.filter(it => it.type === 'plane');
+  const n = Math.max(1, Math.min(12, parseInt($('count').value) || 1, MAX_ITEMS - planes.length));
+  $('count').value = n;
+  const q = num('defQ', 1);
+  items = planes.concat(Array.from({length: n}, (_, i) => ({type:'point', q: signFor(i)*q, x: null, y: null})));
+  seeds = [];
+  renderList(); dirty();
+};
+$('addPlane').onclick = () => {
+  setMsg('');
+  if (items.length >= MAX_ITEMS){ setMsg('Rohkem laenguid ei saa lisada.'); return; }
+  const k = items.filter(it => it.type === 'plane').length;
+  items.push({type:'plane', s: signFor(k)*num('defS', 0.1), x1: null, y1: null, x2: null, y2: null});
+  renderList(); dirty();
+};
+$('clearAll').onclick = () => { items = []; seeds = []; renderList(); dirty(); };
+$('clearLines').onclick = () => { seeds = []; dirty(); };
+$('optAuto').onchange = e => { opts.auto = e.target.checked; dirty(); };
+$('density').oninput = e => { opts.density = +e.target.value; $('densityVal').textContent = e.target.value; dirty(); };
+$('optEqui').onchange = e => { opts.equi = e.target.checked; $('equiOpts').style.display = opts.equi ? 'block' : 'none'; dirty(); };
+$('optEquiFill').onchange = e => { opts.equiFill = e.target.checked; dirty(); };
+$('equiDensity').oninput = e => { opts.equiDensity = +e.target.value; dirty(); };
+$('optGrid').onchange = e => { opts.grid = e.target.checked; dirty(); };
+$('optChain').onchange = e => { opts.chain = e.target.checked; requestDraw(); };
+$('optSnap').onchange = e => { opts.snap = e.target.checked; };
+function updateFixedLabel(){ $('fixedVal').textContent = '100 px ≙ ' + fmtE(Math.pow(10, opts.fixedLog)); }
+$('scaleMode').onchange = e => { opts.scaleMode = e.target.value; $('fixedRow').style.display = opts.scaleMode === 'fixed' ? 'flex' : 'none'; requestDraw(); };
+$('fixedScale').oninput = e => { opts.fixedLog = +e.target.value; updateFixedLabel(); requestDraw(); };
+updateFixedLabel();
+
+function resize(){
+  const r = main.getBoundingClientRect();
+  W = Math.max(200, Math.floor(r.width)); H = Math.max(200, Math.floor(r.height));
+  DPR = window.devicePixelRatio || 1;
+  for (const c of [cv, layer]){ c.width = Math.round(W*DPR); c.height = Math.round(H*DPR); }
+  cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  dirty();
+}
+new ResizeObserver(resize).observe(main);
+if (/github\.io$/.test(location.hostname)) $('back').style.display = 'block';
+
+// Algnäide: dipool
+items = [{type:'point', q: 1, x: -1.5, y: 0}, {type:'point', q: -1, x: 1.5, y: 0}];
+renderList();
+resize();
+window.__fe = {fieldOne, fieldAt, potOne, potAt, placedPx, toPx, preset, items: () => items, autoLines: () => autoLines, userLines: () => userLines, eqStep: () => eqStep, K, PPM};
+</script>
+</body>
+</html>
