@@ -82,6 +82,12 @@
     </div>
     <div class="row"><button class="primary" id="create">Loo punktlaengud</button></div>
     <div class="small" style="margin-bottom:6px">Asendab olemasolevad punktlaengud (tasandid jäävad). Seejärel klõpsa joonisel – iga klõps paigutab järgmise laengu.</div>
+    <div class="row">
+      <span class="small">Lisa üks laeng juurde:</span>
+      <button id="addPos" style="color:#dc2626;font-weight:700">+ positiivne</button>
+      <button id="addNeg" style="color:#2563eb;font-weight:700">− negatiivne</button>
+    </div>
+    <div class="small" style="margin-bottom:6px">Olemasolevad laengud jäävad alles; uue laengu suurus võetakse väljalt „Suurus“. Klõpsa joonisel kohta, kuhu see paigutada.</div>
 
     <h3>Laetud tasandid</h3>
     <div class="row">
@@ -956,6 +962,14 @@ $('create').onclick = () => {
   seeds = [];
   renderList(); dirty();
 };
+function addPoint(sign){
+  setMsg('');
+  if (items.length >= MAX_ITEMS){ setMsg('Rohkem laenguid ei saa lisada.'); return; }
+  items.push({type:'point', q: sign*num('defQ', 1), x: null, y: null});
+  renderList(); dirty();
+}
+$('addPos').onclick = () => addPoint(1);
+$('addNeg').onclick = () => addPoint(-1);
 $('addPlane').onclick = () => {
   setMsg('');
   if (items.length >= MAX_ITEMS){ setMsg('Rohkem laenguid ei saa lisada.'); return; }
