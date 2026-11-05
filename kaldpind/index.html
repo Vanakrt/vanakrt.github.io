@@ -38,8 +38,10 @@
   #back a{color:#2563eb;text-decoration:none}
   @media (max-width:760px){
     #app{flex-direction:column;height:auto}
-    aside{width:auto;border-right:none;border-bottom:1px solid var(--line)}
-    main{height:75vh}
+    main{order:-1;flex:none;height:64vh;min-height:360px;position:sticky;top:0;z-index:2}
+    aside{width:auto;border-right:none;border-top:1px solid var(--line)}
+    input[type=number],select,button{font-size:16px}
+    #hint{font-size:12px;top:6px;padding:4px 8px;max-width:94%}
   }
 </style>
 </head>
@@ -90,6 +92,7 @@
 
 <script>
 'use strict';
+const TOUCH = window.matchMedia && matchMedia('(pointer: coarse)').matches;   // puuteekraan: suuremad käepidemed
 const $ = id => document.getElementById(id);
 const main = $('main'), cv = $('cv'), ctx = cv.getContext('2d');
 let W = 0, H = 0, DPR = 1;
@@ -176,7 +179,8 @@ function draw(){
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
   const a = p.alpha*DEG, ca = Math.cos(a), sa = Math.sin(a);
   // mõõtkava: kaldpind mahub joonisele igal nurgal
-  S = Math.min((W - 160)/LEN, (H - 170)/LEN);
+  const narrow = W < 600;
+  S = Math.min((W - (narrow ? 50 : 160))/LEN, (H - (narrow ? 120 : 170))/LEN);
   const w = LEN*ca*S, h = LEN*sa*S;
   O = dragAnchor ? dragAnchor : [W/2 - w/2, H/2 + h/2 + 30];   // lohistamise ajal alumine tipp paigal
   // maapind ja kaldpind
@@ -207,7 +211,7 @@ function draw(){
   ctx.fillText('m', 0, 0); ctx.restore();
   // jõud (mõõtkava: mg = 120 px)
   const d = dynamics(sim.v), m = p.m, mg = m*G;
-  const k = 120/mg;
+  const k = Math.min(120, 2.6*S)/mg;      // jõudude mõõtkava: mg-nool kuni 120 px
   const sx = ux, sy = -uy, qx = nx, qy = -ny;      // ekraanisuunad: mööda kaldpinda üles, normaal välja
   // raskusjõud
   arrow(cx, cy, cx, cy + mg*k, '#dc2626', 3, null, 'mg');
@@ -254,7 +258,7 @@ function draw(){
   readout(d);
 }
 function drawGraph(){
-  const gw = Math.min(300, W*0.32), gh = 150, gx = W - gw - 18, gy = 18;
+  const gw = Math.min(300, Math.max(130, W*0.32)), gh = W < 600 ? 110 : 150, gx = W - gw - 10, gy = 10;
   ctx.save();
   ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 1;
   ctx.fillRect(gx, gy, gw, gh); ctx.strokeRect(gx, gy, gw, gh);
@@ -347,7 +351,7 @@ function resize(){
 function evPos(e){ const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
 cv.addEventListener('pointerdown', e => {
   const [x, y] = evPos(e);
-  if (Math.hypot(x - topPx[0], y - topPx[1]) < 16){ dragAnchor = O.slice(); sim.running = false; updRunBtn(); cv.setPointerCapture(e.pointerId); }
+  if (Math.hypot(x - topPx[0], y - topPx[1]) < (TOUCH ? 26 : 16)){ dragAnchor = O.slice(); sim.running = false; updRunBtn(); cv.setPointerCapture(e.pointerId); }
 });
 cv.addEventListener('pointermove', e => {
   const [x, y] = evPos(e);
@@ -357,7 +361,7 @@ cv.addEventListener('pointermove', e => {
     if (a !== p.alpha){ p.alpha = a; $('nA').value = a; $('rA').value = a; reset(); }
     return;
   }
-  const h = Math.hypot(x - topPx[0], y - topPx[1]) < 16;
+  const h = Math.hypot(x - topPx[0], y - topPx[1]) < (TOUCH ? 26 : 16);
   if (h !== hoverTop){ hoverTop = h; cv.style.cursor = h ? 'grab' : 'default'; draw(); }
 });
 const endTop = () => { if (dragAnchor){ dragAnchor = null; draw(); } };

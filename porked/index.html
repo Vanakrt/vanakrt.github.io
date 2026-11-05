@@ -42,8 +42,10 @@
   #back a{color:#2563eb;text-decoration:none}
   @media (max-width:760px){
     #app{flex-direction:column;height:auto}
-    aside{width:auto;border-right:none;border-bottom:1px solid var(--line)}
-    main{height:80vh}
+    main{order:-1;flex:none;height:72vh;min-height:360px;position:sticky;top:0;z-index:2}
+    aside{width:auto;border-right:none;border-top:1px solid var(--line)}
+    input[type=number],select,button{font-size:16px}
+    #hint{font-size:12px;top:6px;padding:4px 8px;max-width:94%}
   }
 </style>
 </head>
@@ -106,6 +108,7 @@
 
 <script>
 'use strict';
+const TOUCH = window.matchMedia && matchMedia('(pointer: coarse)').matches;   // puuteekraan: suuremad käepidemed
 const $ = id => document.getElementById(id);
 const main = $('main'), cv = $('cv'), ctx = cv.getContext('2d');
 let W = 0, H = 0, DPR = 1;
@@ -193,7 +196,10 @@ function cart(x, m, v, color, name){
   ctx.globalAlpha = 1; ctx.fillStyle = '#1f2937';
   for (const dx of [-w/3, w/3]){ ctx.beginPath(); ctx.arc(cx + dx, by + 2, 8, 0, 2*Math.PI); ctx.fill(); }
   ctx.fillStyle = '#fff'; ctx.font = '600 13px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(name, cx, by - h/2 - 7); ctx.font = '12px system-ui, sans-serif'; ctx.fillText(fmt(m, 1) + ' kg', cx, by - h/2 + 9);
+  if (w >= 46){ ctx.fillText(name, cx, by - h/2 - 7); ctx.font = '12px system-ui, sans-serif'; ctx.fillText(fmt(m, 1) + ' kg', cx, by - h/2 + 9); }
+  else { // kitsas käru (telefon): mass kahel real
+    ctx.font = '600 11px system-ui, sans-serif'; ctx.fillText(name, cx, by - h/2 - 10);
+    ctx.font = '10px system-ui, sans-serif'; ctx.fillText(fmt(m, 1), cx, by - h/2 + 2); ctx.fillText('kg', cx, by - h/2 + 12); }
   ctx.restore();
   // kiirusnool
   if (Math.abs(v) > 1e-6){
@@ -205,7 +211,7 @@ function cart(x, m, v, color, name){
 function draw(){
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
-  S = (W - 80)/TRACK; OX = 40; TY = Math.min(240, H*0.36);
+  S = (W - 80)/TRACK; OX = 40; TY = W < 620 ? Math.min(170, H*0.28) : Math.min(240, H*0.36);
   // rööbas
   ctx.fillStyle = '#e7e5e4'; ctx.fillRect(OX - 10, TY + 10, TRACK*S + 20, 10);
   ctx.strokeStyle = '#57534e'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(OX - 10, TY + 10); ctx.lineTo(OX + TRACK*S + 10, TY + 10); ctx.stroke();
@@ -235,18 +241,22 @@ function draw(){
 // impulsi ja energia tulbad: enne / pärast
 function drawBars(){
   const b = before(), a = sim.after;
-  const top = TY + 90, avail = H - top - 20;
+  // kitsal ekraanil (telefon) on impulsi ja energia diagrammid üksteise all
+  const narrow = W < 620;
+  const top = TY + (narrow ? 66 : 90), avail = H - top - 20;
   if (avail < 120) return;
-  const colW = (W - 80)/2, gx1 = 40, gx2 = 40 + colW + 20;
+  const colW = narrow ? W - 32 : (W - 80)/2, gx1 = narrow ? 16 : 40;
+  const bh = narrow ? 12 : Math.min(16, (avail - 60)/9);
+  const eTop = narrow ? top + 30 + 2*(3*bh + 22) + 10 : top;
+  const gx2 = narrow ? 16 : 40 + colW + 20;
   // impulss
   ctx.save(); ctx.font = '600 14px system-ui, sans-serif'; ctx.fillStyle = '#111827'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  ctx.fillText('Impulss p (kg·m/s)', gx1, top); ctx.fillText('Kineetiline energia Eₖ (J)', gx2, top); ctx.restore();
+  ctx.fillText('Impulss p (kg·m/s)', gx1, top); ctx.fillText('Kineetiline energia Eₖ (J)', gx2, eTop); ctx.restore();
   const p1b = p.m1*b.v1, p2b = p.m2*b.v2, Pb = p1b + p2b;
   const p1a = a ? p.m1*a.v1 : null, p2a = a ? p.m2*a.v2 : null;
   const pmax = Math.max(1, Math.abs(p1b), Math.abs(p2b), Math.abs(Pb), a ? Math.abs(p1a) : 0, a ? Math.abs(p2a) : 0, a ? Math.abs(p1a + p2a) : 0);
   const rows = [['enne', [p1b, p2b, Pb]], ['pärast', a ? [p1a, p2a, p1a + p2a] : null]];
-  const zx = gx1 + colW/2 + 10, half = colW/2 - 40;
-  const bh = Math.min(16, (avail - 60)/9);
+  const zx = gx1 + colW/2 + (narrow ? 20 : 10), half = colW/2 - (narrow ? 62 : 40);
   let y = top + 30;
   ctx.strokeStyle = '#9ca3af'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(zx, y - 6); ctx.lineTo(zx, y + 2*(3*bh + 22) - 10); ctx.stroke();
   for (const [name, vals] of rows){
@@ -268,10 +278,10 @@ function drawBars(){
   const Ea1 = a ? p.m1*a.v1*a.v1/2 : 0, Ea2 = a ? p.m2*a.v2*a.v2/2 : 0;
   const totB = Eb1 + Eb2 + Esp, loss = a ? Math.max(0, totB - Ea1 - Ea2) : 0;
   const emax = Math.max(0.1, totB, Ea1 + Ea2);
-  const barH = Math.min(avail - 70, 220), bw = Math.min(90, colW/4), base = top + 34 + barH;
+  const barH = narrow ? Math.max(40, H - eTop - 58) : Math.min(avail - 70, 220), bw = narrow ? 50 : Math.min(90, colW/4), base = eTop + 34 + barH;
   const cols = [['enne', [[Eb1, C1, 'E₁'], [Eb2, C2, 'E₂'], [Esp, '#64748b', 'vedru']]], ['pärast', a ? [[Ea1, C1, 'E₁′'], [Ea2, C2, 'E₂′'], [loss, 'hatch', 'soojus, deform.']] : null]];
   cols.forEach(([name, parts], ci) => {
-    const x = gx2 + 30 + ci*(bw + 90);
+    const x = gx2 + (narrow ? 20 : 30) + ci*(bw + (narrow ? 120 : 90));
     text(x + bw/2, base + 14, name, '#374151', 12);
     if (!parts){ text(x + bw/2, base - 20, '–', '#9ca3af', 12); return; }
     let yb = base, sum = 0;

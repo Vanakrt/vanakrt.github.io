@@ -37,8 +37,10 @@
   #hint{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(31,41,55,.85);color:#fff;font-size:13px;padding:6px 12px;border-radius:8px;pointer-events:none;max-width:90%;text-align:center}
   @media (max-width:760px){
     #app{flex-direction:column;height:auto}
-    aside{width:auto;border-right:none;border-bottom:1px solid var(--line)}
-    main{height:75vh}
+    main{order:-1;flex:none;height:64vh;min-height:360px;position:sticky;top:0;z-index:2}
+    aside{width:auto;border-right:none;border-top:1px solid var(--line)}
+    input[type=number],select,button{font-size:16px}
+    #hint{font-size:12px;top:6px;padding:4px 8px;max-width:94%}
   }
 </style>
 </head>
@@ -97,6 +99,7 @@
 
 <script>
 'use strict';
+const TOUCH = window.matchMedia && matchMedia('(pointer: coarse)').matches;   // puuteekraan: suuremad käepidemed
 const $ = id => document.getElementById(id);
 const main = $('main'), cv = $('cv'), ctx = cv.getContext('2d');
 let W = 0, H = 0, DPR = 1;
@@ -176,7 +179,7 @@ function fitView(){
   if (p.drag) consider(trajectory(Object.assign({}, p, {drag:false})));
   trails.forEach(consider);
   ymax = Math.max(ymax, p.h0 + 2);
-  const padL = 70, padR = 40, padT = 50, padB = 50;
+  const narrow = W < 600, padL = narrow ? 44 : 70, padR = narrow ? 16 : 40, padT = 50, padB = 50;
   view.S = Math.min((W - padL - padR)/(xmax*1.05), (H - padT - padB)/(ymax*1.12));
   view.ox = padL; view.oy = H - padB;
   view.xmax = (W - padL - padR)/view.S; view.ymax = (H - padT - padB)/view.S;
@@ -366,7 +369,7 @@ function tip(){ const a = p.alpha*DEG, k = vScale()*1.6; return [X(0) + p.v0*Mat
 cv.addEventListener('pointerdown', e => {
   if (running) return;
   const q = evPos(e), [tx, ty] = tip();
-  if (Math.hypot(q.x - tx, q.y - ty) < 16){ aiming = {k: vScale()*1.6}; cv.setPointerCapture(e.pointerId); }
+  if (Math.hypot(q.x - tx, q.y - ty) < (TOUCH ? 28 : 16)){ aiming = {k: vScale()*1.6}; cv.setPointerCapture(e.pointerId); }
 });
 cv.addEventListener('pointermove', e => {
   const q = evPos(e);
@@ -378,7 +381,7 @@ cv.addEventListener('pointermove', e => {
     if (v !== p.v0 || a !== p.alpha){ p.v0 = v; p.alpha = a; $('nV').value = v; $('rV').value = v; $('nA').value = a; $('rA').value = a; prepare(); draw(); }
     return;
   }
-  if (!running){ const [tx, ty] = tip(); cv.style.cursor = Math.hypot(q.x - tx, q.y - ty) < 16 ? 'grab' : 'default'; }
+  if (!running){ const [tx, ty] = tip(); cv.style.cursor = Math.hypot(q.x - tx, q.y - ty) < (TOUCH ? 28 : 16) ? 'grab' : 'default'; }
 });
 const endAim = () => { if (aiming){ aiming = false; reset(); } };
 cv.addEventListener('pointerup', endAim); cv.addEventListener('pointercancel', endAim);

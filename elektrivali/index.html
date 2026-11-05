@@ -54,8 +54,10 @@
   #scale{position:absolute;left:10px;bottom:10px;font-size:12px;color:var(--muted);background:rgba(255,255,255,.85);padding:3px 6px;border-radius:4px;pointer-events:none}
   @media (max-width:760px){
     #app{flex-direction:column;height:auto}
-    aside{width:auto;border-right:none;border-bottom:1px solid var(--line)}
-    main{height:75vh}
+    main{order:-1;flex:none;height:64vh;min-height:360px;position:sticky;top:0;z-index:2}
+    aside{width:auto;border-right:none;border-top:1px solid var(--line)}
+    input[type=number],select,button{font-size:16px}
+    #hint{font-size:12px;top:6px;padding:4px 8px;max-width:94%}
   }
 </style>
 </head>
@@ -167,6 +169,7 @@
     <h2>Kasutamine</h2>
     <div class="small">
       • Klõps tühjale kohale – joonistab läbi selle punkti jõujoone (roosa).<br>
+      • Puuteekraanil vali joonise all paremal olevast nupust, kas puudutus näitab välja selles punktis või joonistab jõujoone. Laengu eemaldamiseks kasuta loendis ✕ nuppu.<br>
       • Punktlaengut ja tasandit saab lohistada; tasandi otsapunkte (valged täpid) saab eraldi lohistada. Paremklõps eemaldab.<br>
       • Kursori juures: iga laengu (või tasandi) väljatugevus <b>E<sub>i</sub></b> tema värviga ja summaarne väli <b>E</b> mustaga. Kriipsjoon näitab vektorite liitmist järjest.<br>
       • Nooled näitavad välja suunda (+ → −). Punktlaengult lähtuvate joonte arv on võrdeline laenguga, tasandilt lähtuvate joonte tihedus pinnalaengu tihedusega σ.<br>
@@ -179,14 +182,16 @@
   <main id="main">
     <canvas id="cv"></canvas>
     <div id="hint"></div>
+    <button id="touchMode" style="display:none;position:absolute;right:8px;bottom:8px;z-index:3;background:#1f2937;color:#fff;border-color:#1f2937;font-size:14px"></button>
     <div id="scale">1 ruut = 0,5 m</div>
   </main>
 </div>
 
 <script>
 'use strict';
+const TOUCH = window.matchMedia && matchMedia('(pointer: coarse)').matches;   // puuteekraan: suuremad käepidemed
 const K = 8.9875517923e9;   // N·m²/C²
-const PPM = 100;            // pikslit meetri kohta
+let PPM = 100;              // pikslit meetri kohta (kitsal ekraanil väiksem)
 const GRID_M = 0.5;
 const SNAP_M = 0.25;
 const CHARGE_R = 14;
@@ -820,7 +825,8 @@ function updateHint(){
     h.textContent = 'Lisa vasakul paneelil laengud või vali valmis paigutus.';
   } else {
     h.className = '';
-    h.textContent = 'Klõps tühjale kohale joonistab jõujoone · lohista laengut või tasandit · paremklõps eemaldab';
+    h.textContent = !TOUCH ? 'Klõps tühjale kohale joonistab jõujoone · lohista laengut või tasandit · paremklõps eemaldab'
+      : (touchMeasure ? 'Puuduta või vea sõrmega – näed välja selles punktis · lohista laenguid' : 'Puudutus tühjal kohal joonistab jõujoone · lohista laenguid');
   }
 }
 function signFor(i){
@@ -867,17 +873,17 @@ function hitTest(x, y){
   const P = placedPx();
   for (let i = P.length - 1; i >= 0; i--){
     const o = P[i];
-    if (o.kind === 'p' && Math.hypot(o.x - x, o.y - y) < CHARGE_R + 4) return {it: items[o.idx], mode:'point'};
+    if (o.kind === 'p' && Math.hypot(o.x - x, o.y - y) < CHARGE_R + (TOUCH ? 14 : 4)) return {it: items[o.idx], mode:'point'};
   }
   for (let i = P.length - 1; i >= 0; i--){
     const o = P[i];
     if (o.kind !== 's') continue;
-    if (Math.hypot(o.ax - x, o.ay - y) < 9) return {it: items[o.idx], mode:'end1'};
-    if (Math.hypot(o.bx - x, o.by - y) < 9) return {it: items[o.idx], mode:'end2'};
+    if (Math.hypot(o.ax - x, o.ay - y) < (TOUCH ? 18 : 9)) return {it: items[o.idx], mode:'end1'};
+    if (Math.hypot(o.bx - x, o.by - y) < (TOUCH ? 18 : 9)) return {it: items[o.idx], mode:'end2'};
   }
   for (let i = P.length - 1; i >= 0; i--){
     const o = P[i];
-    if (o.kind === 's' && segDist(o, x, y)[0] < 8) return {it: items[o.idx], mode:'move'};
+    if (o.kind === 's' && segDist(o, x, y)[0] < (TOUCH ? 14 : 8)) return {it: items[o.idx], mode:'move'};
   }
   return null;
 }
@@ -907,6 +913,7 @@ cv.addEventListener('pointerdown', e => {
     updatePositions(); updateHint(); dirty();
     return;
   }
+  if (TOUCH && touchMeasure){ measuring = true; cv.setPointerCapture(e.pointerId); requestDraw(); return; }   // puudutus näitab välja
   if (items.some(isPlaced)){ seeds.push([wx, wy]); dirty(); }
 });
 cv.addEventListener('pointermove', e => {
@@ -940,10 +947,10 @@ cv.addEventListener('pointermove', e => {
   cv.style.cursor = h ? (h.mode === 'end1' || h.mode === 'end2' ? 'move' : 'grab') : (placing ? 'copy' : 'crosshair');
   requestDraw();
 });
-const endDrag = () => { if (drag){ drag = null; cv.style.cursor = 'grab'; dirty(); } };
+const endDrag = () => { measuring = false; if (drag){ drag = null; cv.style.cursor = 'grab'; dirty(); } };
 cv.addEventListener('pointerup', endDrag);
 cv.addEventListener('pointercancel', endDrag);
-cv.addEventListener('pointerleave', () => { if (!drag){ hover = null; requestDraw(); } });
+cv.addEventListener('pointerleave', () => { if (!drag && !TOUCH){ hover = null; requestDraw(); } });
 cv.addEventListener('contextmenu', e => {
   e.preventDefault();
   const p = evPos(e);
@@ -999,9 +1006,14 @@ updateScaleExpl();
 $('fixedScale').oninput = e => { opts.fixedLog = +e.target.value; updateFixedLabel(); requestDraw(); };
 updateFixedLabel();
 
+// puuteekraanil: kas puudutus mõõdab välja või joonistab jõujoone
+let touchMeasure = true, measuring = false;
+function updTouchBtn(){ $('touchMode').textContent = touchMeasure ? '👆 Puudutus: mõõdab välja' : '✏️ Puudutus: joonistab jõujoone'; updateHint(); }
+if (TOUCH){ $('touchMode').style.display = 'block'; $('touchMode').onclick = () => { touchMeasure = !touchMeasure; updTouchBtn(); }; $('touchMode').textContent = '👆 Puudutus: mõõdab välja'; }
 function resize(){
   const r = main.getBoundingClientRect();
   W = Math.max(200, Math.floor(r.width)); H = Math.max(200, Math.floor(r.height));
+  PPM = W < 700 ? Math.max(40, Math.min(100, Math.min(W, H)/7)) : 100;
   DPR = window.devicePixelRatio || 1;
   for (const c of [cv, layer]){ c.width = Math.round(W*DPR); c.height = Math.round(H*DPR); }
   cv.style.width = W + 'px'; cv.style.height = H + 'px';

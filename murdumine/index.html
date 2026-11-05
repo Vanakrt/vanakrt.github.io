@@ -37,8 +37,10 @@
   #back a{color:#2563eb;text-decoration:none}
   @media (max-width:760px){
     #app{flex-direction:column;height:auto}
-    aside{width:auto;border-right:none;border-bottom:1px solid var(--line)}
-    main{height:75vh}
+    main{order:-1;flex:none;height:64vh;min-height:360px;position:sticky;top:0;z-index:2}
+    aside{width:auto;border-right:none;border-top:1px solid var(--line)}
+    input[type=number],select,button{font-size:16px}
+    #hint{font-size:12px;top:6px;padding:4px 8px;max-width:94%}
   }
 </style>
 </head>
@@ -118,6 +120,7 @@
 
 <script>
 'use strict';
+const TOUCH = window.matchMedia && matchMedia('(pointer: coarse)').matches;   // puuteekraan: suuremad käepidemed
 const $ = id => document.getElementById(id);
 const main = $('main'), cv = $('cv'), ctx = cv.getContext('2d');
 let W = 0, H = 0, DPR = 1;
@@ -551,7 +554,7 @@ function resize(){
   DPR = window.devicePixelRatio || 1;
   cv.width = Math.round(W*DPR); cv.height = Math.round(H*DPR);
   cv.style.width = W + 'px'; cv.style.height = H + 'px';
-  st.S = Math.max(14, Math.min(30, Math.min(W, H) / 30));
+  st.S = Math.max(8, Math.min(30, Math.min(W, H) / 30));     // telefonis väiksem mõõtkava
   draw();
 }
 new ResizeObserver(resize).observe(main);

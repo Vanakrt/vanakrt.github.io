@@ -37,8 +37,10 @@
   #back a{color:#2563eb;text-decoration:none}
   @media (max-width:760px){
     #app{flex-direction:column;height:auto}
-    aside{width:auto;border-right:none;border-bottom:1px solid var(--line)}
-    main{height:75vh}
+    main{order:-1;flex:none;height:64vh;min-height:360px;position:sticky;top:0;z-index:2}
+    aside{width:auto;border-right:none;border-top:1px solid var(--line)}
+    input[type=number],select,button{font-size:16px}
+    #hint{font-size:12px;top:6px;padding:4px 8px;max-width:94%}
   }
 </style>
 </head>
@@ -85,7 +87,7 @@
     <h2>Tulemused</h2>
     <div id="readout"></div>
     <h2>Punkt joonisel</h2>
-    <div id="probe" class="box"><span class="small">Vii hiir joonisele – näed käiguvahet selles punktis. Klõps kinnitab punkti.</span></div>
+    <div id="probe" class="box"><span class="small">Vii hiir joonisele (puuteekraanil puuduta joonist) – näed käiguvahet selles punktis. Klõps kinnitab punkti.</span></div>
 
     <h2>Valguse kalkulaator</h2>
     <div class="small" style="margin-bottom:6px">Samad seosed kehtivad ka valguse korral, kuid seal on λ ja d palju väiksemad kui joonisel.</div>
@@ -118,6 +120,13 @@
 
 <script>
 'use strict';
+const TOUCH = window.matchMedia && matchMedia('(pointer: coarse)').matches;   // puuteekraan: suuremad käepidemed
+if (TOUCH){ // telefonis: puute-vihje, mis kaob pärast esimest puudutust (muidu katab ülemisi silte)
+  const h = document.getElementById('hint');
+  h.textContent = 'Lohista allikat või ekraani · puuduta, et mõõta käiguvahet';
+  h.style.transition = 'opacity .4s';
+  document.getElementById('cv') && document.getElementById('cv').addEventListener('pointerdown', () => { h.style.opacity = '0'; }, { once: true });
+}
 const $ = id => document.getElementById(id);
 const main = $('main'), cv = $('cv'), ctx = cv.getContext('2d');
 let W = 0, H = 0, DPR = 1;
@@ -125,7 +134,7 @@ const st = { view:'wave', play:true, speed:0.6, N:2, lam:1.5, d:5, dphi:0, slits
              lines:true, screen:true, far:false, L:30, S:20, ox:60 };
 let phase = 0, probe = null, pinned = false, drag = null;
 const RES = 3;     // välja võrgu samm pikslites
-const GRAPH_W = 120;
+let GRAPH_W = 120;   // kitsal ekraanil kitsam
 
 /* ---------- abifunktsioonid ---------- */
 const comma = s => String(s).replace('.', ',');
@@ -419,7 +428,7 @@ function draw(){
 }
 function drawProbe(src){
   const box = $('probe');
-  if (!probe){ box.innerHTML = '<span class="small">Vii hiir joonisele – näed käiguvahet selles punktis. Klõps kinnitab punkti.</span>'; return; }
+  if (!probe){ box.innerHTML = '<span class="small">Vii hiir joonisele (puuteekraanil puuduta joonist) – näed käiguvahet selles punktis. Klõps kinnitab punkti.</span>'; return; }
   const {x, y} = probe;
   if (st.N < 2 || x < 0 || (st.screen && x > st.L)){ box.innerHTML = '<span class="small">Vii hiir allikatest paremale (ekraani ette).</span>'; return; }
   const s1 = src[0], s2 = src[1];
@@ -500,13 +509,14 @@ function recompute(){ fitScale(); compute(); draw(); }
 function evPos(e){ const r = cv.getBoundingClientRect(); return {x: e.clientX - r.left, y: e.clientY - r.top}; }
 function hit(p){
   const src = sources(), top = src[src.length - 1];
-  if (st.N >= 2 && Math.hypot(p.x - X(top.x), p.y - Y(top.y)) < 12) return 'src';
-  if (st.screen && Math.abs(p.x - X(st.L)) < 8) return 'screen';
+  if (st.N >= 2 && Math.hypot(p.x - X(top.x), p.y - Y(top.y)) < (TOUCH ? 22 : 12)) return 'src';
+  if (st.screen && Math.abs(p.x - X(st.L)) < (TOUCH ? 16 : 8)) return 'screen';
   return null;
 }
 cv.addEventListener('pointerdown', e => {
   const p = evPos(e), h = hit(p);
   if (h){ drag = h; cv.setPointerCapture(e.pointerId); return; }
+  if (TOUCH){ touching = true; pinned = true; cv.setPointerCapture(e.pointerId); probe = {x: toX(p.x), y: toY(p.y)}; draw(); return; }   // puudutus: punkt sõrme all
   pinned = !pinned; probe = {x: toX(p.x), y: toY(p.y)}; draw();
 });
 cv.addEventListener('pointermove', e => {
@@ -524,19 +534,22 @@ cv.addEventListener('pointermove', e => {
   }
   const h = hit(p);
   cv.style.cursor = h === 'src' ? 'ns-resize' : (h === 'screen' ? 'ew-resize' : 'crosshair');
-  if (!pinned){ probe = {x: toX(p.x), y: toY(p.y)}; if (!st.play || st.view !== 'wave') draw(); }
+  if (!pinned || touching){ probe = {x: toX(p.x), y: toY(p.y)}; if (!st.play || st.view !== 'wave') draw(); }
 });
-const endDrag = () => { if (drag){ drag = null; fitScale(); compute(); draw(); } };
+let touching = false;
+const endDrag = () => { touching = false; if (drag){ drag = null; fitScale(); compute(); draw(); } };
 cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
-cv.addEventListener('pointerleave', () => { if (!pinned){ probe = null; draw(); } });
+cv.addEventListener('pointerleave', () => { if (!pinned && !TOUCH){ probe = null; draw(); } });
 
 /* ---------- mõõtkava ja animatsioon ---------- */
 function fitScale(){
   if (drag) return;    // lohistamise ajal mõõtkava ei muutu
   const span = st.screen ? st.L : 40;
-  const avail = W - 70 - (st.screen ? GRAPH_W + 50 : 10);
-  st.S = Math.max(6, Math.min(40, avail/span));
-  st.ox = 70;
+  const narrow = W < 600;
+  GRAPH_W = narrow ? 56 : 120;
+  st.ox = narrow ? 44 : 70;
+  const avail = W - st.ox - (st.screen ? GRAPH_W + (narrow ? 30 : 50) : 10);
+  st.S = Math.max(5, Math.min(40, avail/span));
 }
 let last = performance.now();
 function loop(t){
