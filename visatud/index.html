@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kaldu visatud keha</title>
+<style>
+  :root{ color-scheme: light; --panel:#fff; --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb; }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:#f6f7f9}
+  #app{display:flex;height:100vh}
+  aside{width:340px;flex:none;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:16px 16px 24px}
+  main{flex:1;position:relative;min-width:0}
+  canvas{display:block;touch-action:none}
+  h1{font-size:18px;margin:0 0 12px}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:18px 0 8px}
+  label{font-size:13px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  .row label{display:flex;gap:6px;align-items:center}
+  input[type=number],select{font:inherit;font-size:13px;padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px;width:70px;background:#fff;color:#1f2937;-webkit-text-fill-color:#1f2937;opacity:1}
+  select{width:auto}
+  input[type=range]{width:120px}
+  button{font:inherit;font-size:13px;padding:6px 12px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;color:#1f2937;cursor:pointer}
+  button:hover{background:#f1f5f9}
+  button.primary{background:#1f2937;color:#fff;border-color:#1f2937}
+  .chk{display:flex;gap:6px;align-items:center;margin-bottom:6px;font-size:13px}
+  .unit{font-size:12px;color:var(--muted)}
+  .small{font-size:12px;color:var(--muted);line-height:1.45}
+  .sw{display:inline-block;width:16px;height:3px;border-radius:2px;vertical-align:middle;margin-right:2px}
+  #readout{font-size:13px;line-height:1.55}
+  #readout table{border-collapse:collapse;width:100%;font-size:12.5px}
+  #readout td{padding:1px 6px 1px 0}
+  #readout td:last-child{text-align:right;white-space:nowrap}
+  .box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:6px 10px;margin-bottom:8px}
+  #back{display:none;font-size:13px;margin-bottom:10px}
+  #back a{color:#2563eb;text-decoration:none}
+  #hint{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(31,41,55,.85);color:#fff;font-size:13px;padding:6px 12px;border-radius:8px;pointer-events:none;max-width:90%;text-align:center}
+  @media (max-width:760px){
+    #app{flex-direction:column;height:auto}
+    aside{width:auto;border-right:none;border-bottom:1px solid var(--line)}
+    main{height:75vh}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside>
+    <div id="back"><a href="../">← Kõik simulatsioonid</a></div>
+    <h1>Kaldu visatud keha</h1>
+    <div class="row">
+      <button class="primary" id="btnRun">▶ Viska</button>
+      <button id="btnReset">↺ Algusesse</button>
+      <label>kiirus <input type="range" id="speed" min="0.1" max="2" step="0.05" value="1"></label>
+    </div>
+
+    <h2>Algtingimused</h2>
+    <div class="row"><label>Algkiirus v₀ <input type="range" id="rV" min="1" max="40" step="0.5"></label><input type="number" id="nV" min="1" max="40" step="0.5"><span class="unit">m/s</span></div>
+    <div class="row"><label>Viskenurk α <input type="range" id="rA" min="-90" max="90" step="1"></label><input type="number" id="nA" min="-90" max="90" step="1"><span class="unit">°</span></div>
+    <div class="row"><label>Algkõrgus h₀ <input type="number" id="nH" min="0" max="100" step="1"></label><span class="unit">m</span></div>
+    <div class="row"><label>Raskuskiirendus
+      <select id="selG"><option value="9.81">Maa (9,81 m/s²)</option><option value="1.62">Kuu (1,62 m/s²)</option><option value="3.71">Marss (3,71 m/s²)</option><option value="24.79">Jupiter (24,79 m/s²)</option></select></label></div>
+    <label class="chk"><input type="checkbox" id="optDrag"> Õhutakistus (∝ v²)</label>
+    <div class="row" id="rowK" style="display:none;margin-left:22px"><label>k/m <input type="number" id="nK" min="0.001" max="1" step="0.005"></label><span class="unit">1/m (a<sub>tak</sub> = (k/m)·v²)</span></div>
+
+    <h2>Kuva</h2>
+    <label class="chk"><input type="checkbox" id="optStrob" checked> Asukohad võrdsete ajavahemike järel</label>
+    <div class="row" style="margin-left:22px"><label>Δt <select id="selDt"><option value="0.1">0,1 s</option><option value="0.2" selected>0,2 s</option><option value="0.5">0,5 s</option><option value="1">1 s</option></select></label></div>
+    <label class="chk"><input type="checkbox" id="optVec" checked> Kiirusvektorid: <span class="sw" style="background:#111827"></span>v <span class="sw" style="background:#2563eb"></span>vₓ <span class="sw" style="background:#dc2626"></span>v<sub>y</sub></label>
+    <label class="chk"><input type="checkbox" id="optProj"> Projektsioonid telgedel (ühtlane ja ühtlaselt muutuv liikumine)</label>
+    <label class="chk"><input type="checkbox" id="optKeep" checked> Jäta varasemad trajektoorid võrdluseks</label>
+
+    <h2>Võrdlused</h2>
+    <div class="row">
+      <button id="cmp1">30° ja 60°</button>
+      <button id="cmp2">15°, 30°, 45°, 60°, 75°</button>
+      <button id="cmpClear">Kustuta jäljed</button>
+    </div>
+
+    <h2>Tulemused</h2>
+    <div id="readout"></div>
+
+    <h2>Kasutamine</h2>
+    <div class="small">
+      • Lohista stardipunktis olevat noolt – muudad algkiirust ja viskenurka.<br>
+      • Liikumine jaguneb kaheks sõltumatuks liikumiseks: horisontaalselt ühtlane (vₓ = v₀·cos α = const), vertikaalselt ühtlaselt muutuv (v<sub>y</sub> = v₀·sin α − g·t).<br>
+      • x = v₀·cos α·t, y = h₀ + v₀·sin α·t − g·t²/2.<br>
+      • Lennuaeg T = (v₀ sin α + √(v₀² sin² α + 2gh₀))/g; tõusu kõrgus H = h₀ + v₀² sin² α/(2g); lennukaugus L = v₀ cos α·T.<br>
+      • Kui h₀ = 0: L = v₀² sin 2α / g – suurim kaugus 45° korral ning täiendusnurgad (nt 30° ja 60°) annavad sama kauguse.<br>
+      • Õhutakistuse korral on lisakiirendus vastassuunas kiirusega, suurusega (k/m)·v²; trajektoor arvutatakse numbriliselt ja ei ole enam sümmeetriline.
+    </div>
+  </aside>
+  <main id="main">
+    <canvas id="cv"></canvas>
+    <div id="hint">Lohista noolt, et muuta algkiirust ja nurka</div>
+  </main>
+</div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const main = $('main'), cv = $('cv'), ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+const DEG = Math.PI/180;
+const p = { v0:15, alpha:45, h0:0, g:9.81, drag:false, k:0.02, strob:true, dtS:0.2, vec:true, proj:false, keep:true, speed:1 };
+const COLORS = ['#7c3aed', '#059669', '#d97706', '#db2777', '#0891b2', '#65a30d', '#b91c1c'];
+let trails = [];            // [{pts, label, color}]
+let cur = null;             // praegune trajektoor {pts, T, L, Hmax}
+let tNow = 0, running = false, done = false;
+let view = {S:20, ox:60, oy:0, xmax:30, ymax:15};
+
+/* ---------- abifunktsioonid ---------- */
+const comma = s => String(s).replace('.', ',');
+const minus = s => String(s).replace(/^-/, '−');
+const fmt = (v, d = 2) => isFinite(v) ? minus(comma((Math.abs(v) < 0.5*Math.pow(10, -d) ? 0 : v).toFixed(d))) : '–';
+const X = x => view.ox + x*view.S, Y = y => view.oy - y*view.S;
+
+/* ---------- füüsika ---------- */
+function analytic(q){
+  const a = q.alpha*DEG, vx = q.v0*Math.cos(a), vy = q.v0*Math.sin(a);
+  const T = (vy + Math.sqrt(vy*vy + 2*q.g*q.h0))/q.g;
+  const Hm = vy > 0 ? q.h0 + vy*vy/(2*q.g) : q.h0;
+  return {T, L: vx*T, Hm, tTop: vy > 0 ? vy/q.g : 0};
+}
+// trajektoor: punktid {t,x,y,vx,vy} kuni maandumiseni (y = 0)
+function trajectory(q){
+  const a = q.alpha*DEG;
+  const pts = [];
+  if (!q.drag){
+    const A = analytic(q), n = 400;
+    const vx = q.v0*Math.cos(a), vy0 = q.v0*Math.sin(a);
+    for (let i = 0; i <= n; i++){
+      const t = A.T*i/n;
+      pts.push({t, x: vx*t, y: Math.max(0, q.h0 + vy0*t - q.g*t*t/2), vx, vy: vy0 - q.g*t});
+    }
+    return {pts, T:A.T, L:A.L, Hm:A.Hm};
+  }
+  // õhutakistus: a = −g ŷ − (k/m)|v| v, RK4
+  let x = 0, y = q.h0, vx = q.v0*Math.cos(a), vy = q.v0*Math.sin(a), t = 0, Hm = y;
+  const dt = 0.002, f = (vx, vy) => { const v = Math.hypot(vx, vy); return [-q.k*v*vx, -q.g - q.k*v*vy]; };
+  pts.push({t, x, y, vx, vy});
+  for (let i = 0; i < 200000; i++){
+    const k1 = f(vx, vy), k2 = f(vx + k1[0]*dt/2, vy + k1[1]*dt/2), k3 = f(vx + k2[0]*dt/2, vy + k2[1]*dt/2), k4 = f(vx + k3[0]*dt, vy + k3[1]*dt);
+    const nvx = vx + dt*(k1[0] + 2*k2[0] + 2*k3[0] + k4[0])/6, nvy = vy + dt*(k1[1] + 2*k2[1] + 2*k3[1] + k4[1])/6;
+    const nx = x + dt*(vx + 2*(vx + k1[0]*dt/2) + 2*(vx + k2[0]*dt/2) + (vx + k3[0]*dt))/6;
+    const ny = y + dt*(vy + 2*(vy + k1[1]*dt/2) + 2*(vy + k2[1]*dt/2) + (vy + k3[1]*dt))/6;
+    if (ny < 0){
+      const s = y/(y - ny);   // lineaarne interpolatsioon maapinnani
+      pts.push({t: t + s*dt, x: x + s*(nx - x), y: 0, vx: vx + s*(nvx - vx), vy: vy + s*(nvy - vy)});
+      break;
+    }
+    x = nx; y = ny; vx = nvx; vy = nvy; t += dt; Hm = Math.max(Hm, y);
+    if (i % 5 === 0) pts.push({t, x, y, vx, vy});
+  }
+  const last = pts[pts.length - 1];
+  return {pts, T:last.t, L:last.x, Hm};
+}
+function stateAt(tr, t){
+  const P = tr.pts;
+  if (t <= 0) return P[0];
+  if (t >= P[P.length - 1].t) return P[P.length - 1];
+  let lo = 0, hi = P.length - 1;
+  while (hi - lo > 1){ const m = (lo + hi) >> 1; if (P[m].t <= t) lo = m; else hi = m; }
+  const a = P[lo], b = P[hi], s = (t - a.t)/(b.t - a.t);
+  if (!p.drag){   // täpne valem
+    const al = p.alpha*DEG, vx = p.v0*Math.cos(al), vy0 = p.v0*Math.sin(al);
+    return {t, x: vx*t, y: p.h0 + vy0*t - p.g*t*t/2, vx, vy: vy0 - p.g*t};
+  }
+  return {t, x: a.x + s*(b.x - a.x), y: a.y + s*(b.y - a.y), vx: a.vx + s*(b.vx - a.vx), vy: a.vy + s*(b.vy - a.vy)};
+}
+
+/* ---------- vaade ---------- */
+function fitView(){
+  let xmax = 10, ymax = 5;
+  const consider = tr => { for (const q of tr.pts){ xmax = Math.max(xmax, q.x); ymax = Math.max(ymax, q.y); } };
+  if (cur) consider(cur);
+  if (p.drag) consider(trajectory(Object.assign({}, p, {drag:false})));
+  trails.forEach(consider);
+  ymax = Math.max(ymax, p.h0 + 2);
+  const padL = 70, padR = 40, padT = 50, padB = 50;
+  view.S = Math.min((W - padL - padR)/(xmax*1.05), (H - padT - padB)/(ymax*1.12));
+  view.ox = padL; view.oy = H - padB;
+  view.xmax = (W - padL - padR)/view.S; view.ymax = (H - padT - padB)/view.S;
+}
+function niceStep(range){
+  const raw = range/8, e = Math.pow(10, Math.floor(Math.log10(raw))), f = raw/e;
+  return (f < 1.5 ? 1 : f < 3.5 ? 2 : f < 7.5 ? 5 : 10)*e;
+}
+
+/* ---------- joonistamine ---------- */
+function arrow(x1, y1, x2, y2, color, w, dash){
+  const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy); if (L < 3) return;
+  const ux = dx/L, uy = dy/L, hs = 8 + w;
+  ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = w; ctx.lineCap = 'round';
+  if (dash) ctx.setLineDash(dash);
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2 - ux*hs*0.7, y2 - uy*hs*0.7); ctx.stroke(); ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(x2 - ux*hs - uy*hs*0.42, y2 - uy*hs + ux*hs*0.42); ctx.lineTo(x2 - ux*hs + uy*hs*0.42, y2 - uy*hs - ux*hs*0.42); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+function label(x, y, text, color, size, align){
+  ctx.save(); ctx.font = `600 ${size || 12}px system-ui, sans-serif`; ctx.textAlign = align || 'center'; ctx.textBaseline = 'middle';
+  ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.strokeText(text, x, y);
+  ctx.fillStyle = color; ctx.fillText(text, x, y); ctx.restore();
+}
+function polyline(pts, color, w, dash, tmax){
+  ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = w; ctx.lineJoin = 'round'; if (dash) ctx.setLineDash(dash);
+  ctx.beginPath(); let started = false;
+  for (const q of pts){ if (tmax !== undefined && q.t > tmax) break; if (!started){ ctx.moveTo(X(q.x), Y(q.y)); started = true; } else ctx.lineTo(X(q.x), Y(q.y)); }
+  ctx.stroke(); ctx.restore();
+}
+const vScale = () => Math.max(2.5, Math.min(8, 70/Math.max(5, p.v0)));   // px per m/s
+function draw(){
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+  // ruudustik ja teljed
+  const st = niceStep(Math.max(view.xmax, view.ymax));
+  ctx.strokeStyle = '#eef0f3'; ctx.lineWidth = 1; ctx.beginPath();
+  for (let x = 0; x <= view.xmax; x += st){ ctx.moveTo(X(x), Y(0)); ctx.lineTo(X(x), Y(view.ymax)); }
+  for (let y = 0; y <= view.ymax; y += st){ ctx.moveTo(X(0), Y(y)); ctx.lineTo(X(view.xmax), Y(y)); }
+  ctx.stroke();
+  ctx.fillStyle = '#e7e5e4'; ctx.fillRect(0, Y(0), W, H - Y(0));
+  ctx.strokeStyle = '#57534e'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, Y(0)); ctx.lineTo(W, Y(0)); ctx.stroke();
+  ctx.fillStyle = '#6b7280'; ctx.font = '11px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (let x = 0; x <= view.xmax; x += st) ctx.fillText(comma(String(+x.toFixed(6))), X(x), Y(0) + 5);
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (let y = st; y <= view.ymax; y += st) ctx.fillText(comma(String(+y.toFixed(6))), X(0) - 6, Y(y));
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText('x (m)', X(view.xmax) - 30, Y(0) + 20);
+  ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.fillText('y (m)', X(0) - 6, Y(view.ymax) - 4);
+  // stardikõrgus
+  if (p.h0 > 0){ ctx.fillStyle = '#d6d3d1'; ctx.fillRect(X(0) - 18, Y(p.h0), 18, Y(0) - Y(p.h0)); ctx.strokeStyle = '#78716c'; ctx.strokeRect(X(0) - 18, Y(p.h0), 18, Y(0) - Y(p.h0)); }
+  // jäljed
+  const placed = [];
+  trails.forEach(tr => {
+    polyline(tr.pts, tr.color, 2, null);
+    const e = tr.pts[tr.pts.length - 1];
+    let ly = Y(0) - 12;
+    while (placed.some(q => Math.abs(q.x - X(e.x)) < 110 && Math.abs(q.y - ly) < 14)) ly -= 15;   // kattuvad sildid üksteise alla
+    placed.push({x: X(e.x), y: ly});
+    label(X(e.x), ly, tr.label, tr.color, 11);
+  });
+  // takistuseta trajektoor võrdluseks
+  if (p.drag){ const ideal = trajectory(Object.assign({}, p, {drag:false})); polyline(ideal.pts, '#9ca3af', 1.5, [6, 5]); }
+  // praegune trajektoor
+  if (cur){
+    polyline(cur.pts, '#1f2937', 2.4, null, tNow);
+    // stroboskoop
+    if (p.strob){
+      for (let t = 0; t <= Math.min(tNow, cur.T) + 1e-9; t += p.dtS){
+        const s = stateAt(cur, t);
+        ctx.save(); ctx.fillStyle = 'rgba(31,41,55,.9)'; ctx.beginPath(); ctx.arc(X(s.x), Y(s.y), 3.5, 0, 2*Math.PI); ctx.fill(); ctx.restore();
+        if (p.vec) drawVel(s, 0.55);
+        if (p.proj){
+          ctx.save(); ctx.fillStyle = '#2563eb'; ctx.beginPath(); ctx.arc(X(s.x), Y(0), 3, 0, 2*Math.PI); ctx.fill();
+          ctx.fillStyle = '#dc2626'; ctx.beginPath(); ctx.arc(X(0), Y(s.y), 3, 0, 2*Math.PI); ctx.fill(); ctx.restore();
+        }
+      }
+    }
+    const s = stateAt(cur, tNow);
+    if (p.proj){
+      ctx.save(); ctx.strokeStyle = 'rgba(37,99,235,.5)'; ctx.setLineDash([3, 4]); ctx.beginPath(); ctx.moveTo(X(s.x), Y(s.y)); ctx.lineTo(X(s.x), Y(0)); ctx.stroke();
+      ctx.strokeStyle = 'rgba(220,38,38,.5)'; ctx.beginPath(); ctx.moveTo(X(s.x), Y(s.y)); ctx.lineTo(X(0), Y(s.y)); ctx.stroke(); ctx.restore();
+    }
+    // keha
+    ctx.save(); ctx.fillStyle = '#f97316'; ctx.strokeStyle = '#7c2d12'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(X(s.x), Y(s.y), 7, 0, 2*Math.PI); ctx.fill(); ctx.stroke(); ctx.restore();
+    if (p.vec) drawVel(s, 1, true);
+    // H ja L märgid
+    if (done || tNow >= cur.T){
+      const top = cur.pts.reduce((a, b) => b.y > a.y ? b : a);
+      if (top.y > p.h0 + 0.01){
+        ctx.save(); ctx.strokeStyle = '#7c3aed'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(X(top.x), Y(top.y)); ctx.lineTo(X(top.x), Y(0)); ctx.stroke(); ctx.restore();
+        label(X(top.x) + 8, Y(top.y/2), 'H = ' + fmt(cur.Hm) + ' m', '#7c3aed', 12, 'left');
+      }
+      label((X(0) + X(cur.L))/2, Y(0) + 30, 'L = ' + fmt(cur.L) + ' m', '#1f2937', 12);
+    }
+  }
+  // sihtimisnool
+  if (!running){
+    const a = p.alpha*DEG, k = vScale()*1.6;
+    const sx = X(0), sy = Y(p.h0), ex = sx + p.v0*Math.cos(a)*k, ey = sy - p.v0*Math.sin(a)*k;
+    arrow(sx, sy, ex, ey, '#f97316', 3);
+    ctx.save(); ctx.beginPath(); ctx.arc(ex, ey, 8, 0, 2*Math.PI); ctx.strokeStyle = '#f97316'; ctx.lineWidth = 2; ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fill(); ctx.stroke(); ctx.restore();
+    label(ex + 14, ey - 14, 'v₀ = ' + fmt(p.v0, 1) + ' m/s, α = ' + fmt(p.alpha, 0) + '°', '#c2410c', 12, 'left');
+  }
+  readout();
+}
+function labelSub(x, y, base, sub, color){
+  ctx.save(); ctx.textBaseline = 'middle'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.fillStyle = color;
+  ctx.font = '600 13px system-ui, sans-serif'; const w1 = ctx.measureText(base).width;
+  ctx.font = '600 10px system-ui, sans-serif'; const w2 = ctx.measureText(sub).width;
+  const x0 = x - (w1 + w2)/2;
+  ctx.font = '600 13px system-ui, sans-serif'; ctx.textAlign = 'left'; ctx.strokeText(base, x0, y); ctx.fillText(base, x0, y);
+  ctx.font = '600 10px system-ui, sans-serif'; ctx.strokeText(sub, x0 + w1, y + 4); ctx.fillText(sub, x0 + w1, y + 4);
+  ctx.restore();
+}
+function drawVel(s, alpha, labels){
+  const k = vScale(), x = X(s.x), y = Y(s.y);
+  ctx.save(); ctx.globalAlpha = alpha;
+  arrow(x, y, x + s.vx*k, y, '#2563eb', 2);
+  arrow(x, y, x, y - s.vy*k, '#dc2626', 2);
+  arrow(x, y, x + s.vx*k, y - s.vy*k, '#111827', 2.4);
+  ctx.restore();
+  if (labels){
+    labelSub(x - 14, y - s.vy*k, 'v', 'y', '#dc2626');
+    labelSub(x + s.vx*k + 12, y + 2, 'v', 'x', '#2563eb');
+    label(x + s.vx*k + 12, y - s.vy*k - 8, 'v', '#111827', 12);
+  }
+}
+function readout(){
+  const A = analytic(p);
+  let h = `<div class="box"><b>Valemitest</b> (ilma õhutakistuseta)<table>
+    <tr><td>vₓ = v₀·cos α</td><td>${fmt(p.v0*Math.cos(p.alpha*DEG))} m/s</td></tr>
+    <tr><td>v<sub>y0</sub> = v₀·sin α</td><td>${fmt(p.v0*Math.sin(p.alpha*DEG))} m/s</td></tr>
+    <tr><td>lennuaeg T</td><td>${fmt(A.T)} s</td></tr>
+    <tr><td>tõusu kõrgus H</td><td>${fmt(A.Hm)} m</td></tr>
+    <tr><td>lennukaugus L</td><td>${fmt(A.L)} m</td></tr></table></div>`;
+  if (p.drag && cur) h += `<div class="box"><b>Õhutakistusega</b> (numbriliselt)<table><tr><td>T</td><td>${fmt(cur.T)} s</td></tr><tr><td>H</td><td>${fmt(cur.Hm)} m</td></tr><tr><td>L</td><td>${fmt(cur.L)} m (${fmt(100*cur.L/A.L, 0)}% takistuseta kaugusest)</td></tr></table></div>`;
+  if (cur){
+    const s = stateAt(cur, tNow), v = Math.hypot(s.vx, s.vy);
+    h += `<table><tr><td>aeg t</td><td>${fmt(s.t)} s</td></tr>
+      <tr><td>x</td><td>${fmt(s.x)} m</td></tr><tr><td>y</td><td>${fmt(s.y)} m</td></tr>
+      <tr><td><span class="sw" style="background:#2563eb"></span>vₓ</td><td>${fmt(s.vx)} m/s</td></tr>
+      <tr><td><span class="sw" style="background:#dc2626"></span>v<sub>y</sub></td><td>${fmt(s.vy)} m/s</td></tr>
+      <tr><td><span class="sw" style="background:#111827"></span>|v|</td><td>${fmt(v)} m/s, ${fmt(Math.atan2(s.vy, s.vx)/DEG, 0)}° horisondi suhtes</td></tr></table>`;
+  }
+  if (trails.length){
+    h += `<div style="margin-top:6px"><b>Võrdlus</b><table>` + trails.map(tr => `<tr><td><span class="sw" style="background:${tr.color}"></span>${tr.label}</td><td>L = ${fmt(tr.L)} m, H = ${fmt(tr.Hm)} m</td></tr>`).join('') + `</table></div>`;
+  }
+  $('readout').innerHTML = h;
+}
+
+/* ---------- juhtimine ---------- */
+function prepare(){ cur = trajectory(p); tNow = 0; done = false; fitView(); }
+function reset(){ running = false; prepare(); updBtn(); draw(); }
+function updBtn(){ $('btnRun').textContent = running ? '⏸ Peata' : (tNow > 0 && !done ? '▶ Jätka' : '▶ Viska'); }
+function addTrail(q, lbl){
+  const tr = trajectory(q);
+  trails.push({pts: tr.pts, label: lbl, color: COLORS[trails.length % COLORS.length], L: tr.L, Hm: tr.Hm});
+}
+$('btnRun').onclick = () => {
+  if (done) prepare();
+  running = !running; updBtn(); draw();
+};
+$('btnReset').onclick = reset;
+$('speed').oninput = e => p.speed = +e.target.value;
+function bind(id, key, lo, hi, rid){
+  const el = $(id); el.value = p[key];
+  const set = v => { if (!isFinite(v) || v < lo || v > hi) return; p[key] = v; el.value = v; if (rid) $(rid).value = v; reset(); };
+  el.oninput = () => set(parseFloat(String(el.value).replace(',', '.')));
+  if (rid){ $(rid).value = p[key]; $(rid).oninput = e => set(+e.target.value); }
+}
+bind('nV', 'v0', 1, 40, 'rV'); bind('nA', 'alpha', -90, 90, 'rA'); bind('nH', 'h0', 0, 100); bind('nK', 'k', 0.001, 1);
+$('selG').onchange = e => { p.g = +e.target.value; reset(); };
+$('optDrag').onchange = e => { p.drag = e.target.checked; $('rowK').style.display = p.drag ? 'flex' : 'none'; reset(); };
+$('optStrob').onchange = e => { p.strob = e.target.checked; draw(); };
+$('selDt').onchange = e => { p.dtS = +e.target.value; draw(); };
+$('optVec').onchange = e => { p.vec = e.target.checked; draw(); };
+$('optProj').onchange = e => { p.proj = e.target.checked; draw(); };
+$('optKeep').onchange = e => { p.keep = e.target.checked; };
+$('cmp1').onclick = () => { trails = []; for (const a of [30, 60]) addTrail(Object.assign({}, p, {alpha:a}), a + '°'); fitView(); draw(); };
+$('cmp2').onclick = () => { trails = []; for (const a of [15, 30, 45, 60, 75]) addTrail(Object.assign({}, p, {alpha:a}), a + '°'); fitView(); draw(); };
+$('cmpClear').onclick = () => { trails = []; fitView(); draw(); };
+
+// sihtimisnoole lohistamine
+let aiming = false;
+function evPos(e){ const r = cv.getBoundingClientRect(); return {x: e.clientX - r.left, y: e.clientY - r.top}; }
+function tip(){ const a = p.alpha*DEG, k = vScale()*1.6; return [X(0) + p.v0*Math.cos(a)*k, Y(p.h0) - p.v0*Math.sin(a)*k]; }
+cv.addEventListener('pointerdown', e => {
+  if (running) return;
+  const q = evPos(e), [tx, ty] = tip();
+  if (Math.hypot(q.x - tx, q.y - ty) < 16){ aiming = {k: vScale()*1.6}; cv.setPointerCapture(e.pointerId); }
+});
+cv.addEventListener('pointermove', e => {
+  const q = evPos(e);
+  if (aiming){
+    // noole mõõtkava sõltub v₀-st, seepärast kasutatakse lohistamise alguse mõõtkava
+    const dx = q.x - X(0), dy = Y(p.h0) - q.y, kk = aiming.k;
+    let v = Math.round(Math.hypot(dx, dy)/kk*2)/2, a = Math.round(Math.atan2(dy, dx)/DEG);
+    v = Math.max(1, Math.min(40, v)); a = Math.max(-90, Math.min(90, a));
+    if (v !== p.v0 || a !== p.alpha){ p.v0 = v; p.alpha = a; $('nV').value = v; $('rV').value = v; $('nA').value = a; $('rA').value = a; prepare(); draw(); }
+    return;
+  }
+  if (!running){ const [tx, ty] = tip(); cv.style.cursor = Math.hypot(q.x - tx, q.y - ty) < 16 ? 'grab' : 'default'; }
+});
+const endAim = () => { if (aiming){ aiming = false; reset(); } };
+cv.addEventListener('pointerup', endAim); cv.addEventListener('pointercancel', endAim);
+
+let last = performance.now();
+function loop(t){
+  const dt = Math.min(0.05, (t - last)/1000); last = t;
+  if (running && cur){
+    tNow += dt*p.speed;
+    if (tNow >= cur.T){
+      tNow = cur.T; running = false; done = true; updBtn();
+      // lõpetatud vise jääb jäljena alles
+      if (p.keep) trails.push({pts: cur.pts, label: fmt(p.alpha, 0) + '°, ' + fmt(p.v0, 1) + ' m/s' + (p.drag ? ' (tak.)' : ''), color: COLORS[trails.length % COLORS.length], L: cur.L, Hm: cur.Hm});
+    }
+    draw();
+  }
+  requestAnimationFrame(loop);
+}
+function resize(){
+  const r = main.getBoundingClientRect();
+  W = Math.max(300, Math.floor(r.width)); H = Math.max(300, Math.floor(r.height));
+  DPR = window.devicePixelRatio || 1;
+  cv.width = Math.round(W*DPR); cv.height = Math.round(H*DPR);
+  cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  fitView(); draw();
+}
+new ResizeObserver(resize).observe(main);
+if (/github\.io$/.test(location.hostname)) $('back').style.display = 'block';
+prepare(); resize(); requestAnimationFrame(loop);
+window.__pj = {p, analytic, trajectory, stateAt, get cur(){ return cur; }, get trails(){ return trails; }, reset, draw, prepare, setT: t => { tNow = t; done = t >= cur.T; draw(); }};
+</script>
+</body>
+</html>

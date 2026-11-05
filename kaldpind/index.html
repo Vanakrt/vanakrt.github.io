@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keha kaldpinnal</title>
+<style>
+  :root{ color-scheme: light; --panel:#fff; --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb; }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:#f6f7f9}
+  #app{display:flex;height:100vh}
+  aside{width:340px;flex:none;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:16px 16px 24px}
+  main{flex:1;position:relative;min-width:0}
+  canvas{display:block;touch-action:none}
+  h1{font-size:18px;margin:0 0 12px}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:18px 0 8px}
+  label{font-size:13px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  .row label{display:flex;gap:6px;align-items:center}
+  input[type=number]{font:inherit;font-size:13px;padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px;width:70px;background:#fff;color:#1f2937;-webkit-text-fill-color:#1f2937;opacity:1}
+  input[type=range]{width:120px}
+  button{font:inherit;font-size:13px;padding:6px 12px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;color:#1f2937;cursor:pointer}
+  button:hover{background:#f1f5f9}
+  button.primary{background:#1f2937;color:#fff;border-color:#1f2937}
+  .chk{display:flex;gap:6px;align-items:center;margin-bottom:6px;font-size:13px}
+  .unit{font-size:12px;color:var(--muted)}
+  .small{font-size:12px;color:var(--muted);line-height:1.45}
+  .sw{display:inline-block;width:16px;height:3px;border-radius:2px;vertical-align:middle;margin-right:2px}
+  #readout{font-size:13px;line-height:1.55}
+  #readout table{border-collapse:collapse;width:100%;font-size:12.5px}
+  #readout td{padding:1px 6px 1px 0}
+  #readout td:last-child{text-align:right;white-space:nowrap}
+  .status{border-radius:6px;padding:5px 8px;margin:6px 0;font-size:13px}
+  .st-rest{background:#ecfdf5;border:1px solid #a7f3d0}
+  .st-move{background:#eff6ff;border:1px solid #bfdbfe}
+  .st-end{background:#fef3c7;border:1px solid #fcd34d}
+  #back{display:none;font-size:13px;margin-bottom:10px}
+  #back a{color:#2563eb;text-decoration:none}
+  @media (max-width:760px){
+    #app{flex-direction:column;height:auto}
+    aside{width:auto;border-right:none;border-bottom:1px solid var(--line)}
+    main{height:75vh}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside>
+    <div id="back"><a href="../">← Kõik simulatsioonid</a></div>
+    <h1>Keha kaldpinnal</h1>
+
+    <div class="row">
+      <button class="primary" id="btnRun">▶ Käivita</button>
+      <button id="btnReset">↺ Algusesse</button>
+    </div>
+
+    <h2>Kaldpind ja keha</h2>
+    <div class="row"><label>Kaldenurk α <input type="range" id="rA" min="0" max="70" step="0.5"></label><input type="number" id="nA" min="0" max="70" step="0.5"><span class="unit">°</span></div>
+    <div class="row"><label>Mass m <input type="number" id="nM" min="0.1" max="100" step="0.1"></label><span class="unit">kg</span></div>
+    <div class="row"><label>Hõõrdetegur μ <input type="number" id="nMu" min="0" max="2" step="0.01"></label></div>
+    <label class="chk"><input type="checkbox" id="optTwoMu"> eristan seisu- ja liugehõõrdetegurit</label>
+    <div class="row" id="rowMuK" style="display:none;margin-left:22px"><label>liugehõõrdetegur μ<sub>l</sub> <input type="number" id="nMuK" min="0" max="2" step="0.01"></label></div>
+
+    <h2>Lisatingimused</h2>
+    <div class="row"><label>Lisajõud F <input type="number" id="nF" min="-500" max="500" step="1"></label><span class="unit">N (mööda kaldpinda, + üles)</span></div>
+    <div class="row"><label>Algkiirus v₀ <input type="number" id="nV" min="-10" max="10" step="0.5"></label><span class="unit">m/s (+ üles)</span></div>
+
+    <h2>Kuva</h2>
+    <label class="chk"><input type="checkbox" id="optComp" checked> <span class="sw" style="background:#7c3aed"></span> raskusjõu komponendid</label>
+    <label class="chk"><input type="checkbox" id="optNet" checked> <span class="sw" style="background:#059669"></span> resultantjõud ΣF</label>
+    <label class="chk"><input type="checkbox" id="optVel"> <span class="sw" style="background:#0891b2"></span> kiirusvektor</label>
+    <label class="chk"><input type="checkbox" id="optGraph" checked> kiiruse graafik v(t)</label>
+
+    <h2>Jõud ja liikumine</h2>
+    <div id="readout"></div>
+
+    <h2>Kasutamine</h2>
+    <div class="small">
+      • Telg on suunatud mööda kaldpinda üles; positiivne kiirus ja jõud tähendavad liikumist või mõju üles.<br>
+      • Raskusjõud mg jaguneb komponentideks mööda kaldpinda (mg·sin α) ja risti kaldpinnaga (mg·cos α). Toereaktsioonijõud N = mg·cos α (kui lisajõud on kaldpinnaga paralleelne).<br>
+      • Seisuhõõrdejõud on täpselt nii suur, kui on vaja keha paigal hoidmiseks, kuid ei saa ületada väärtust μ<sub>s</sub>·N. Kui see ei piisa, hakkab keha libisema ja mõjub liugehõõrdejõud F<sub>h</sub> = μ<sub>l</sub>·N, mis on vastassuunas liikumisega.<br>
+      • Ilma lisajõuta püsib keha paigal, kui tan α ≤ μ<sub>s</sub>; piirnurk α<sub>p</sub> = arctan μ<sub>s</sub>.<br>
+      • Kiirendus a = ΣF/m. Raskuskiirendus g = 9,81 m/s².<br>
+      • Kaldpinna pikkus joonisel on 6 m; keha alustab 4 m kõrguselt mööda kaldpinda (alt mõõdetuna).
+    </div>
+  </aside>
+  <main id="main"><canvas id="cv"></canvas></main>
+</div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const main = $('main'), cv = $('cv'), ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+const G = 9.81, LEN = 6, S0 = 4, BOX = 0.7;
+const p = { alpha:30, m:2, mu:0.3, twoMu:false, muK:0.25, F:0, v0:0, comp:true, net:true, vel:false, graph:true };
+const sim = { t:0, s:S0, v:0, running:false, ended:null, hist:[] };
+const DEG = Math.PI/180;
+
+/* ---------- abifunktsioonid ---------- */
+const comma = s => String(s).replace('.', ',');
+const minus = s => String(s).replace(/^-/, '−');
+const fmt = (v, d = 2) => isFinite(v) ? minus(comma((Math.abs(v) < 0.5*Math.pow(10, -d) ? 0 : v).toFixed(d))) : '–';
+const muS = () => p.mu, muK = () => p.twoMu ? p.muK : p.mu;
+
+/* ---------- füüsika ---------- */
+// Jõud mööda kaldpinda (positiivne = üles). Tagastab ka hõõrdejõu ja kiirenduse.
+function dynamics(v){
+  const a = p.alpha*DEG, m = p.m;
+  const N = m*G*Math.cos(a);
+  const Gpar = -m*G*Math.sin(a);           // raskusjõu komponent mööda kaldpinda
+  const drive = Gpar + p.F;                 // kõik peale hõõrde
+  if (Math.abs(v) > 1e-9){
+    const f = -Math.sign(v)*muK()*N;
+    return {N, Gpar, drive, f, kind:'liuge', a:(drive + f)/m};
+  }
+  if (Math.abs(drive) <= muS()*N + 1e-12) return {N, Gpar, drive, f:-drive, kind:'seisu', a:0};
+  const f = -Math.sign(drive)*muK()*N;
+  return {N, Gpar, drive, f, kind:'liuge', a:(drive + f)/m};
+}
+function step(dt){
+  const d = dynamics(sim.v);
+  if (d.a === 0 && Math.abs(sim.v) < 1e-9){ sim.t += dt; return; }
+  const vNew = sim.v + d.a*dt;
+  if (Math.abs(sim.v) > 1e-9 && Math.sign(vNew) !== Math.sign(sim.v) && vNew !== 0){
+    // kiirus läbib nulli selle sammu jooksul: peatume täpselt nullkiirusel
+    const tz = -sim.v/d.a;
+    sim.s += sim.v*tz + 0.5*d.a*tz*tz; sim.v = 0; sim.t += tz;
+    return;
+  }
+  sim.s += sim.v*dt + 0.5*d.a*dt*dt; sim.v = vNew; sim.t += dt;
+}
+function advance(T){
+  const dt = 0.001;
+  let left = T;
+  while (left > 1e-12 && sim.running){
+    const h = Math.min(dt, left);
+    step(h); left -= h;
+    if (sim.s <= BOX/2){ sim.s = BOX/2; sim.running = false; sim.ended = 'all'; }
+    else if (sim.s >= LEN - BOX/2){ sim.s = LEN - BOX/2; sim.running = false; sim.ended = 'üles'; }
+    else if (sim.t > 60){ sim.running = false; sim.ended = 'aeg'; }
+    // paigal püsimine: kui kiirus on null ja keha jääb seisma
+    if (sim.running && Math.abs(sim.v) < 1e-9 && dynamics(0).a === 0 && sim.t > 0){ sim.running = false; sim.ended = 'seis'; }
+  }
+  if (!sim.hist.length || sim.t - sim.hist[sim.hist.length - 1][0] > 0.02) sim.hist.push([sim.t, sim.v]);
+}
+function reset(){ sim.t = 0; sim.s = S0; sim.v = p.v0; sim.running = false; sim.ended = null; sim.hist = [[0, p.v0]]; updRunBtn(); draw(); }
+
+/* ---------- joonistamine ---------- */
+let S = 80, O = [0, 0];            // px/m ja kaldpinna alumine tipp ekraanil
+const toPx = (x, y) => [O[0] + x*S, O[1] - y*S];
+function arrow(x1, y1, x2, y2, color, w, dash, lbl, lblPos){
+  const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy);
+  if (L < 3) return;
+  const ux = dx/L, uy = dy/L, hs = 10 + w;
+  ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = w; ctx.lineCap = 'round';
+  if (dash) ctx.setLineDash(dash);
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2 - ux*hs*0.7, y2 - uy*hs*0.7); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(x2 - ux*hs - uy*hs*0.42, y2 - uy*hs + ux*hs*0.42); ctx.lineTo(x2 - ux*hs + uy*hs*0.42, y2 - uy*hs - ux*hs*0.42); ctx.closePath(); ctx.fill();
+  ctx.restore();
+  if (lbl){
+    const t = lblPos || 1; const lx = x1 + dx*t + ux*14 - uy*0, ly = y1 + dy*t + uy*14;
+    label(lx, ly, lbl, color);
+  }
+}
+function label(x, y, text, color, size){
+  ctx.save(); ctx.font = `600 ${size || 13}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.strokeText(text, x, y);
+  ctx.fillStyle = color; ctx.fillText(text, x, y); ctx.restore();
+}
+function draw(){
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+  const a = p.alpha*DEG, ca = Math.cos(a), sa = Math.sin(a);
+  // mõõtkava: kaldpind mahub joonisele igal nurgal
+  S = Math.min((W - 160)/LEN, (H - 170)/LEN);
+  const w = LEN*ca*S, h = LEN*sa*S;
+  O = [W/2 - w/2, H/2 + h/2 + 30];
+  // maapind ja kaldpind
+  ctx.fillStyle = '#e7e5e4'; ctx.fillRect(0, O[1], W, H - O[1]);
+  ctx.strokeStyle = '#57534e'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, O[1]); ctx.lineTo(W, O[1]); ctx.stroke();
+  const top = toPx(LEN*ca, LEN*sa), corner = toPx(LEN*ca, 0);
+  ctx.fillStyle = '#f5f0e6'; ctx.strokeStyle = '#78716c'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(O[0], O[1]); ctx.lineTo(top[0], top[1]); ctx.lineTo(corner[0], corner[1]); ctx.closePath(); ctx.fill(); ctx.stroke();
+  // nurk α
+  if (p.alpha > 0){
+    ctx.save(); ctx.strokeStyle = '#1f2937'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(O[0], O[1], 46, -a, 0); ctx.stroke(); ctx.restore();
+    label(O[0] + 62*Math.cos(a/2), O[1] - 62*Math.sin(a/2), 'α', '#1f2937', 15);
+  }
+  // keha
+  const s = sim.s;
+  const ux = ca, uy = sa;                // ühikvektor mööda kaldpinda üles (maailm)
+  const nx = -sa, ny = ca;               // normaal (maailm)
+  const cxw = s*ux + nx*BOX/2, cyw = s*uy + ny*BOX/2;
+  const [cx, cy] = toPx(cxw, cyw);
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(-a);
+  ctx.fillStyle = '#93c5fd'; ctx.strokeStyle = '#1e3a8a'; ctx.lineWidth = 2;
+  ctx.fillRect(-BOX*S/2, -BOX*S/2, BOX*S, BOX*S); ctx.strokeRect(-BOX*S/2, -BOX*S/2, BOX*S, BOX*S);
+  ctx.fillStyle = '#1e3a8a'; ctx.font = '600 13px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('m', 0, 0); ctx.restore();
+  // jõud (mõõtkava: mg = 120 px)
+  const d = dynamics(sim.v), m = p.m, mg = m*G;
+  const k = 120/mg;
+  const sx = ux, sy = -uy, qx = nx, qy = -ny;      // ekraanisuunad: mööda kaldpinda üles, normaal välja
+  // raskusjõud
+  arrow(cx, cy, cx, cy + mg*k, '#dc2626', 3, null, 'mg');
+  if (p.comp && p.alpha > 0){
+    const par = d.Gpar*k, per = -mg*ca*k;
+    arrow(cx, cy, cx + sx*par, cy + sy*par, '#7c3aed', 2, [6, 4], 'mg·sin α', 1);
+    arrow(cx, cy, cx + qx*per, cy + qy*per, '#7c3aed', 2, [6, 4], 'mg·cos α', 1);
+    // komponentide rööpkülik
+    ctx.save(); ctx.strokeStyle = 'rgba(124,58,237,.35)'; ctx.setLineDash([3, 4]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cx + sx*par, cy + sy*par); ctx.lineTo(cx, cy + mg*k); ctx.lineTo(cx + qx*per, cy + qy*per); ctx.stroke(); ctx.restore();
+    // nurk α raskusjõu ja ristkomponendi vahel
+    const a0 = Math.PI/2, a1 = Math.atan2(qy*per, qx*per);
+    ctx.save(); ctx.strokeStyle = '#7c3aed'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.arc(cx, cy, 34, Math.min(a0, a1), Math.max(a0, a1)); ctx.stroke(); ctx.restore();
+    const am = (a0 + a1)/2; label(cx + 46*Math.cos(am), cy + 46*Math.sin(am), 'α', '#7c3aed', 12);
+  }
+  // toereaktsioon N
+  arrow(cx, cy, cx + qx*d.N*k, cy + qy*d.N*k, '#2563eb', 3, null, 'N');
+  // hõõrdejõud (kontaktpinnal)
+  if (Math.abs(d.f) > 1e-9){
+    const bx = cx - qx*BOX*S/2, by = cy - qy*BOX*S/2;
+    arrow(bx, by, bx + sx*d.f*k, by + sy*d.f*k, '#d97706', 3, null, d.kind === 'seisu' ? 'Fₕ (seisu)' : 'Fₕ');
+  }
+  // lisajõud
+  if (Math.abs(p.F) > 1e-9){
+    const off = BOX*S/2 * Math.sign(p.F);
+    const bx = cx + sx*off, by = cy + sy*off;
+    arrow(bx, by, bx + sx*p.F*k, by + sy*p.F*k, '#0f172a', 3, null, 'F');
+  }
+  // resultant
+  if (p.net){
+    const net = d.drive + d.f;
+    if (Math.abs(net) > 1e-6){
+      const ox = cx + qx*(BOX*S/2 + 26), oy = cy + qy*(BOX*S/2 + 26);
+      arrow(ox, oy, ox + sx*net*k, oy + sy*net*k, '#059669', 3, null, 'ΣF', 1);
+    } else label(cx + sx*(BOX*S/2 + 46) + qx*(BOX*S/2 + 10), cy + sy*(BOX*S/2 + 46) + qy*(BOX*S/2 + 10), 'ΣF = 0', '#059669', 13);
+  }
+  // kiirus
+  if (p.vel && Math.abs(sim.v) > 1e-6){
+    const kv = 30;   // px per m/s
+    const ox = cx + qx*(BOX*S/2 + 54), oy = cy + qy*(BOX*S/2 + 54);
+    arrow(ox, oy, ox + sx*sim.v*kv, oy + sy*sim.v*kv, '#0891b2', 2.5, null, 'v', 1);
+  }
+  if (p.graph) drawGraph();
+  readout(d);
+}
+function drawGraph(){
+  const gw = Math.min(300, W*0.32), gh = 150, gx = W - gw - 18, gy = 18;
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 1;
+  ctx.fillRect(gx, gy, gw, gh); ctx.strokeRect(gx, gy, gw, gh);
+  const pl = 38, pr = 10, pt = 26, pb = 16;
+  const x0 = gx + pl, x1 = gx + gw - pr, y0 = gy + gh - pb, y1 = gy + pt;
+  const hist = sim.hist.length ? sim.hist : [[0, 0]];
+  const tmax = Math.max(2, Math.ceil(hist[hist.length - 1][0]));
+  let vmax = 1; for (const [, v] of hist) vmax = Math.max(vmax, Math.abs(v));
+  vmax = Math.ceil(vmax);
+  const X = t => x0 + (x1 - x0)*t/tmax, Y = v => (y0 + y1)/2 - (y0 - y1)/2*v/vmax;
+  ctx.strokeStyle = '#9ca3af'; ctx.beginPath(); ctx.moveTo(x0, y1); ctx.lineTo(x0, y0); ctx.moveTo(x0, Y(0)); ctx.lineTo(x1, Y(0)); ctx.stroke();
+  ctx.fillStyle = '#6b7280'; ctx.font = '11px system-ui, sans-serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  ctx.fillText(String(vmax), x0 - 4, Y(vmax)); ctx.fillText('0', x0 - 4, Y(0)); ctx.fillText(minus(String(-vmax)), x0 - 4, Y(-vmax));
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(tmax + ' s', x1 - 8, Y(0) + 3);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillStyle = '#374151'; ctx.font = '600 11px system-ui, sans-serif';
+  ctx.fillText('v (m/s)', gx + 6, gy + 4); ctx.textAlign = 'right'; ctx.fillText('t (s)', x1, gy + 4);
+  ctx.strokeStyle = '#0891b2'; ctx.lineWidth = 2; ctx.beginPath();
+  hist.forEach(([t, v], i) => i ? ctx.lineTo(X(t), Y(v)) : ctx.moveTo(X(t), Y(v))); ctx.stroke();
+  ctx.restore();
+}
+function readout(d){
+  const a = p.alpha*DEG, mg = p.m*G, fs = muS()*d.N;
+  let h = '';
+  let st, cls;
+  if (sim.ended === 'all'){ st = 'Keha jõudis kaldpinna alla.'; cls = 'st-end'; }
+  else if (sim.ended === 'üles'){ st = 'Keha jõudis kaldpinna ülaotsa.'; cls = 'st-end'; }
+  else if (Math.abs(sim.v) < 1e-9 && d.kind === 'seisu'){ st = `Keha püsib paigal: vajalik seisuhõõrdejõud ${fmt(Math.abs(d.f))} N ≤ μ<sub>s</sub>N = ${fmt(fs)} N.`; cls = 'st-rest'; }
+  else if (Math.abs(sim.v) < 1e-9){ st = `Keha hakkab libisema: vaja oleks seisuhõõrdejõudu ${fmt(Math.abs(d.drive))} N, kuid suurim võimalik on μ<sub>s</sub>N = ${fmt(fs)} N.`; cls = 'st-move'; }
+  else { st = `Keha liigub ${sim.v > 0 ? 'üles' : 'alla'}; mõjub liugehõõrdejõud μ<sub>l</sub>N = ${fmt(Math.abs(d.f))} N.`; cls = 'st-move'; }
+  h += `<div class="status ${cls}">${st}</div>`;
+  h += `<table>
+    <tr><td><span class="sw" style="background:#dc2626"></span>raskusjõud mg</td><td>${fmt(mg)} N</td></tr>
+    <tr><td><span class="sw" style="background:#7c3aed"></span>mg·sin α (mööda kaldpinda)</td><td>${fmt(mg*Math.sin(a))} N</td></tr>
+    <tr><td><span class="sw" style="background:#7c3aed"></span>mg·cos α (risti)</td><td>${fmt(mg*Math.cos(a))} N</td></tr>
+    <tr><td><span class="sw" style="background:#2563eb"></span>toereaktsioon N</td><td>${fmt(d.N)} N</td></tr>
+    <tr><td><span class="sw" style="background:#d97706"></span>hõõrdejõud F<sub>h</sub> (${d.kind === 'seisu' ? 'seisu' : 'liuge'})</td><td>${fmt(Math.abs(d.f))} N</td></tr>
+    <tr><td class="small">suurim seisuhõõre μ<sub>s</sub>N</td><td class="small">${fmt(fs)} N</td></tr>
+    ${p.F ? `<tr><td><span class="sw" style="background:#0f172a"></span>lisajõud F</td><td>${fmt(p.F)} N</td></tr>` : ''}
+    <tr><td><span class="sw" style="background:#059669"></span><b>resultant ΣF</b> (+ üles)</td><td><b>${fmt(d.drive + d.f)} N</b></td></tr>
+    <tr><td><b>kiirendus a = ΣF/m</b></td><td><b>${fmt(d.a)} m/s²</b></td></tr>
+  </table>`;
+  h += `<div style="margin-top:6px">t = ${fmt(sim.t)} s, v = ${fmt(sim.v)} m/s, läbitud teepikkus mööda kaldpinda ${fmt(Math.abs(sim.s - S0))} m</div>`;
+  if (!p.F){
+    const ac = Math.atan(muS())/DEG;
+    h += `<div class="small" style="margin-top:6px">tan α = ${fmt(Math.tan(a), 3)}, μ<sub>s</sub> = ${fmt(muS(), 3)} → ${Math.tan(a) <= muS() + 1e-12 ? 'tan α ≤ μ<sub>s</sub>: paigal olev keha jääb paigale' : 'tan α &gt; μ<sub>s</sub>: paigal olev keha hakkab libisema'}. Piirnurk α<sub>p</sub> = arctan μ<sub>s</sub> = ${fmt(ac, 1)}°.</div>`;
+  }
+  $('readout').innerHTML = h;
+}
+
+/* ---------- juhtelemendid ---------- */
+function updRunBtn(){ $('btnRun').textContent = sim.running ? '⏸ Peata' : '▶ Käivita'; }
+$('btnRun').onclick = () => {
+  if (sim.ended){ reset(); }
+  sim.running = !sim.running;
+  // kui keha jääb kohe paigale, pole midagi animeerida
+  if (sim.running && Math.abs(sim.v) < 1e-9 && dynamics(0).a === 0){ sim.running = false; sim.ended = 'seis'; }
+  updRunBtn(); draw();
+};
+$('btnReset').onclick = reset;
+function bindNum(id, key, lo, hi, rangeId){
+  const el = $(id);
+  el.value = p[key];
+  const set = v => { if (!isFinite(v) || v < lo || v > hi) return false; p[key] = v; if (rangeId) $(rangeId).value = v; el.value = v; reset(); return true; };
+  el.oninput = () => set(parseFloat(String(el.value).replace(',', '.')));
+  if (rangeId){ $(rangeId).value = p[key]; $(rangeId).oninput = e => set(+e.target.value); }
+}
+bindNum('nA', 'alpha', 0, 70, 'rA'); bindNum('nM', 'm', 0.1, 100); bindNum('nMu', 'mu', 0, 2); bindNum('nMuK', 'muK', 0, 2);
+bindNum('nF', 'F', -500, 500); bindNum('nV', 'v0', -10, 10);
+$('optTwoMu').onchange = e => { p.twoMu = e.target.checked; $('rowMuK').style.display = p.twoMu ? 'flex' : 'none'; reset(); };
+$('optComp').onchange = e => { p.comp = e.target.checked; draw(); };
+$('optNet').onchange = e => { p.net = e.target.checked; draw(); };
+$('optVel').onchange = e => { p.vel = e.target.checked; draw(); };
+$('optGraph').onchange = e => { p.graph = e.target.checked; draw(); };
+
+let last = performance.now();
+function loop(t){
+  const dt = Math.min(0.05, (t - last)/1000); last = t;
+  if (sim.running){ advance(dt); if (!sim.running) updRunBtn(); draw(); }
+  requestAnimationFrame(loop);
+}
+function resize(){
+  const r = main.getBoundingClientRect();
+  W = Math.max(300, Math.floor(r.width)); H = Math.max(300, Math.floor(r.height));
+  DPR = window.devicePixelRatio || 1;
+  cv.width = Math.round(W*DPR); cv.height = Math.round(H*DPR);
+  cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  draw();
+}
+new ResizeObserver(resize).observe(main);
+if (/github\.io$/.test(location.hostname)) $('back').style.display = 'block';
+reset(); resize(); requestAnimationFrame(loop);
+window.__kp = {p, sim, dynamics, advance, reset, draw};
+</script>
+</body>
+</html>
