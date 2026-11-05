@@ -82,7 +82,7 @@
         <label>Eseme kõrgus h <input type="number" id="inH" step="0.5" value="4"> <span class="unit">cm</span></label>
       </div>
     </div>
-    <div id="ptNote" class="small" style="display:none;margin-bottom:8px">Lohista joonisel eseme punkte (ringid). Kolmnurga tipp A liigub ainult mööda peatelge.</div>
+    <div id="ptNote" class="small" style="display:none;margin-bottom:8px">Lohista joonisel eseme punkte (ringid). Noole otspunkte A ja B saab liigutada eraldi (nool jääb läbi peatelje). Kolmnurga tipp A liigub ainult mööda peatelge.</div>
 
     <h2>Kiired</h2>
     <div id="rayList"></div>
@@ -133,7 +133,7 @@ let W = 0, H = 0, DPR = 1;
 
 const st = { type:'conv', F:10, d:25, h:4, obj:'arrow', fan:false, dims:true, snap:true, S:18,
              rays:{1:true, 2:true, 3:true, 4:true},
-             a2: {d:25, y1:-2, y2:4},                                  // nool läbi peatelje: saba y1, tipp y2
+             a2: {x1:-25, y1:-2, x2:-25, y2:4},                        // nool läbi peatelje: saba A (x1,y1), tipp B (x2,y2)
              tri: [{x:-27, y:0}, {x:-22, y:4}, {x:-19, y:1.5}],         // kolmnurk: A peateljel
              pts: {A:true, B:true, C:true}, helper:false, sec:true, secY:3 };
 const SEC_COLOR = '#0891b2';
@@ -200,7 +200,7 @@ function imgPt(b, x, y){
 function optics(){ return imgPt(base(), -st.d, st.h); }
 // Eseme iseloomulikud punktid
 function keyPoints(){
-  if (st.obj === 'arrow2') return [{name:'A', x:-st.a2.d, y:st.a2.y1}, {name:'B', x:-st.a2.d, y:st.a2.y2}];
+  if (st.obj === 'arrow2') return [{name:'A', x:st.a2.x1, y:st.a2.y1}, {name:'B', x:st.a2.x2, y:st.a2.y2}];
   if (st.obj === 'triangle') return st.tri.map((p, i) => ({name:'ABC'[i], x:p.x, y:p.y}));
   return [{name:'', x:-st.d, y:st.h}];
 }
@@ -587,7 +587,10 @@ function draw(){
       const [Pa, Pb] = KP;
       arrowBetween(X(Pa.x), Y(Pa.y), X(Pb.x), Y(Pb.y), OBJ_COLOR, false);
       const qa = imgPt(b, Pa.x, Pa.y), qb = imgPt(b, Pb.x, Pb.y);
-      if (!qa.inf) arrowBetween(X(qa.imgX), Y(qa.hp), X(qb.imgX), Y(qb.hp), IMG_COLOR, !qa.real);
+      // sirglõigu kujutis on sirglõik, kui lõik ei ulatu üle fookustasandi; muidu kaks eraldi osa
+      if (!qa.inf && !qb.inf && Math.sign(-Pa.x - b.Fs) === Math.sign(-Pb.x - b.Fs))
+        arrowBetween(X(qa.imgX), Y(qa.hp), X(qb.imgX), Y(qb.hp), IMG_COLOR, !qa.real);
+      else drawPolyImage(b, KP, false);
     } else {
       drawPoly(KP, OBJ_COLOR, 'rgba(15,118,110,0.15)');
       drawPolyImage(b, KP, true);
@@ -645,9 +648,17 @@ function readout(b, KP){
     }
     html += `</table><div class="small">Kõik suurused sentimeetrites; y – punkti kõrgus peatelje suhtes.</div>`;
     if (st.obj === 'arrow2'){
-      const q = imgPt(b, -st.a2.d, st.a2.y1);
-      if (q.inf) html += `<div style="margin-top:6px"><b>Ese on fookuses</b> – kujutist ei teki.</div>`;
-      else { const G = Math.abs(q.f) / st.a2.d; html += `<div style="margin-top:4px">Suurendus <b>Γ = ${fmt(G, 2)}</b></div>` + tagsHtml(q, 1, G) + sideHtml(q); }
+      const a = st.a2, qa = imgPt(b, a.x1, a.y1), qb = imgPt(b, a.x2, a.y2);
+      const sameSide = Math.sign(-a.x1 - b.Fs) === Math.sign(-a.x2 - b.Fs);
+      if (Math.abs(a.x1 - a.x2) < 1e-9){
+        if (qa.inf) html += `<div style="margin-top:6px"><b>Ese on fookuses</b> – kujutist ei teki.</div>`;
+        else { const G = Math.abs(qa.f) / -a.x1; html += `<div style="margin-top:4px">Suurendus <b>Γ = ${fmt(G, 2)}</b></div>` + tagsHtml(qa, 1, G) + sideHtml(qa); }
+      } else if (qa.inf || qb.inf || !sameSide){
+        html += `<div style="margin-top:6px">Nool ulatub üle fookustasandi: selle osa kujutis läheb lõpmatusse ning kujutis koosneb tõelisest ja näivast osast.</div>`;
+      } else {
+        html += tagsHtml(qa, 1, null) + sideHtml(qa) +
+          `<div class="small" style="margin-top:2px">Kaldus noole kujutis on samuti kaldus sirglõik, kuid otspunktid on läätsest erineval kaugusel ja nende suurendus on erinev – kujutis pole esemega sarnane.</div>`;
+      }
     } else {
       const im = KP.map(k => imgPt(b, k.x, k.y));
       const sides = KP.map(k => Math.sign(-k.x - b.Fs));
@@ -748,9 +759,11 @@ function hitTest(p){
 function dragPoint(name, x, y){
   const sx = snapv(x), sy = snapv(y);
   if (st.obj === 'arrow2'){
-    if (-sx >= 0.5) st.a2.d = -sx;
-    if (name === 'A' && Math.abs(sy - st.a2.y2) >= 0.5) st.a2.y1 = sy;
-    if (name === 'B' && Math.abs(sy - st.a2.y1) >= 0.5) st.a2.y2 = sy;
+    // A ja B liiguvad teineteisest sõltumatult; nool peab jääma läbi peatelje,
+    // seega otspunktid on alati peatelje eri pooltel
+    const a = st.a2, k = name === 'A' ? 1 : 2, other = k === 1 ? a.y2 : a.y1;
+    if (sx <= -0.5) a['x' + k] = sx;
+    a['y' + k] = other > 0 ? Math.min(sy, -0.5) : Math.max(sy, 0.5);
   } else {
     const i = 'ABC'.indexOf(name), P = st.tri[i];
     if (sx <= -0.5) P.x = sx;
