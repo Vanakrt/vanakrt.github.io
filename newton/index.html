@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Newtoni pendel</title>
+<style>
+  :root{ color-scheme: light; --panel:#fff; --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb; }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:#f6f7f9}
+  #app{display:flex;height:100vh}
+  aside{width:340px;flex:none;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:16px 16px 24px}
+  main{flex:1;position:relative;min-width:0}
+  canvas{display:block;touch-action:none}
+  h1{font-size:18px;margin:0 0 12px}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:18px 0 8px}
+  label{font-size:13px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  .row label{display:flex;gap:6px;align-items:center}
+  input[type=number]{font:inherit;font-size:13px;padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px;width:62px;background:#fff;color:#1f2937;-webkit-text-fill-color:#1f2937;opacity:1}
+  input[type=range]{width:110px}
+  button{font:inherit;font-size:13px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;color:#1f2937;cursor:pointer}
+  button:hover{background:#f1f5f9}
+  button.primary{background:#1f2937;color:#fff;border-color:#1f2937}
+  .btns{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .unit{font-size:12px;color:var(--muted)}
+  .small{font-size:12px;color:var(--muted);line-height:1.45}
+  .chk{display:flex;gap:6px;align-items:center;font-size:13px;margin-bottom:6px}
+  #readout,#why{font-size:13px;line-height:1.5}
+  table.t{border-collapse:collapse;width:100%;font-size:12.5px;margin:4px 0}
+  table.t th{font-weight:600;color:#6b7280;text-align:right;padding:2px 4px}
+  table.t th:first-child{text-align:left}
+  table.t td{padding:2px 4px;text-align:right;white-space:nowrap}
+  table.t td:first-child{text-align:left}
+  table.t tr.ok td{background:#dcfce7;font-weight:700}
+  .box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:6px 10px;margin:8px 0}
+  #hint{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(31,41,55,.88);color:#fff;font-size:13px;padding:6px 12px;border-radius:8px;pointer-events:none;max-width:90%;text-align:center;transition:opacity .4s}
+  #back{display:none;font-size:13px;margin-bottom:10px}
+  #back a{color:#2563eb;text-decoration:none}
+  @media (max-width:760px){
+    #app{flex-direction:column;height:auto}
+    main{order:-1;flex:none;height:64vh;min-height:360px;position:sticky;top:0;z-index:2}
+    aside{width:auto;border-right:none;border-top:1px solid var(--line)}
+    input[type=number],select,button{font-size:16px}
+    #hint{font-size:12px;top:6px;padding:4px 8px;max-width:94%}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside>
+    <div id="back"><a href="../">← Kõik simulatsioonid</a></div>
+    <h1>Newtoni pendel</h1>
+    <div class="row">
+      <button class="primary" id="btnRun">▶ Lase lahti</button>
+      <button id="btnReset">↺ Algusesse</button>
+    </div>
+    <div class="row"><label>kiirus <input type="range" id="speed" min="0.05" max="1" step="0.05" value="0.5"></label><span class="unit" id="speedVal"></span></div>
+
+    <h2>Kuulid</h2>
+    <div class="row"><label>Kuulide arv N <input type="number" id="nN" min="2" max="7" step="1"></label></div>
+    <div class="row"><label>Vasakult tõstetud <input type="number" id="nK" min="0" max="6" step="1"></label><label>paremalt <input type="number" id="nJ" min="0" max="6" step="1"></label></div>
+    <div class="row"><label>Tõstenurk α <input type="range" id="rA" min="5" max="60" step="1"></label><input type="number" id="nA" min="5" max="60" step="1"><span class="unit">°</span></div>
+    <div class="row"><label>Põrketegur e <input type="range" id="rE" min="0.5" max="1" step="0.01"></label><input type="number" id="nE" min="0.5" max="1" step="0.01"></div>
+    <label class="chk"><input type="checkbox" id="cHeavy"> Vasakpoolseim kuul 2× raskem</label>
+    <label class="chk"><input type="checkbox" id="cVec" checked> Näita kiirusvektoreid</label>
+
+    <h2>Näited</h2>
+    <div class="btns">
+      <button data-ex="1">1 kuul</button>
+      <button data-ex="2">2 kuuli</button>
+      <button data-ex="3">3 kuuli</button>
+      <button data-ex="both">1 + 1 mõlemalt poolt</button>
+      <button data-ex="21">2 vasakult, 1 paremalt</button>
+      <button data-ex="loss">Kadudega (e = 0,9)</button>
+    </div>
+
+    <h2>Põrge</h2>
+    <div id="readout"></div>
+
+    <h2>Miks lendab välja sama palju kuule?</h2>
+    <div id="why"></div>
+
+    <h2>Kasutamine</h2>
+    <div class="small">
+      • Haara kuulist ja tõsta see kõrvale – koos sellega tõusevad ka kõik kuulid, mis jäävad tema ja serva vahele. Lase lahti, et kuulid liikuma panna. Tõsta saab ka mõlemalt poolt.<br>
+      • Kuulid on niitpendlid (niidi pikkus 30 cm, kuuli läbimõõt 5 cm, mass 0,1 kg; raske kuul 0,2 kg). Pendli liikumine arvutatakse täpselt, mitte väikeste nurkade lähendusega.<br>
+      • Põrked arvutatakse järjestikuste kahe kuuli põrgetena: igas põrkes on impulss jääv ja suhteline kiirus muutub e korda. See vastab olukorrale, kus kuulide vahel on väga väike vahe.<br>
+      • e = 1: elastsed põrked, kineetiline energia on jääv ja pendel kõigub lõputult. e &lt; 1: osa energiast muutub igas põrkes soojuseks ja lõpuks kõiguvad kõik kuulid koos.<br>
+      • Õhutakistust ei arvestata.
+    </div>
+  </aside>
+  <main id="main"><canvas id="cv"></canvas><div id="hint">Haara kuulist, tõsta kõrvale ja lase lahti</div></main>
+</div>
+
+<script>
+'use strict';
+const TOUCH = window.matchMedia && matchMedia('(pointer: coarse)').matches;   // puuteekraan: suuremad käepidemed
+const $ = id => document.getElementById(id);
+const main = $('main'), cv = $('cv'), ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+
+const g = 9.81, L = 0.30, R = 0.025, M0 = 0.1;    // niidi pikkus, kuuli raadius (m), kuuli mass (kg)
+const DT = 1e-4;                                    // integreerimise samm (s)
+const p = { N:5, k:1, j:0, alpha:30, e:1, heavy:false, vec:true, speed:0.5 };
+const sim = { th:[], om:[], m:[], running:false, t:0, impact:null };
+
+/* ---------- abifunktsioonid ---------- */
+const comma = s => String(s).replace('.', ',');
+const minus = s => String(s).replace(/^-/, '−');
+const fmt = (v, d = 2) => isFinite(v) ? minus(comma((Math.abs(v) < 0.5*Math.pow(10, -d) ? 0 : v).toFixed(d))) : '–';
+const rad = a => a*Math.PI/180;
+const pivotX = i => (i - (sim.th.length - 1)/2) * 2*R;          // riputuspunktid 2R vahega: paigal kuulid puutuvad
+const ballPos = i => ({x: pivotX(i) + L*Math.sin(sim.th[i]), y: L*Math.cos(sim.th[i])});   // y allapoole
+const vx = i => L*sim.om[i]*Math.cos(sim.th[i]);                 // kiiruse horisontaalkomponent
+const v0 = a => Math.sqrt(2*g*L*(1 - Math.cos(rad(a))));        // kiirus alumises punktis, kui lastakse lahti nurgalt a
+
+/* ---------- füüsika ---------- */
+function reset(){
+  const N = p.N;
+  sim.th = new Array(N).fill(0); sim.om = new Array(N).fill(0);
+  sim.m = new Array(N).fill(M0); if (p.heavy) sim.m[0] = 2*M0;
+  for (let i = 0; i < p.k; i++) sim.th[i] = -rad(p.alpha);
+  for (let i = 0; i < p.j; i++) sim.th[N - 1 - i] = rad(p.alpha);
+  sim.running = false; sim.t = 0; sim.impact = null;
+  updBtn(); readout(); why(); draw();
+}
+function momentum(){ let s = 0; for (let i = 0; i < sim.th.length; i++) s += sim.m[i]*vx(i); return s; }
+function kinetic(){ let s = 0; for (let i = 0; i < sim.th.length; i++) s += sim.m[i]*(L*sim.om[i])**2/2; return s; }
+function potential(){ let s = 0; for (let i = 0; i < sim.th.length; i++) s += sim.m[i]*g*L*(1 - Math.cos(sim.th[i])); return s; }
+// Kahe kuuli põrge piki tsentreid ühendavat sirget. Niit hoiab kuuli ringjoonel, seega muutub ainult nurkkiirus.
+function pairCollide(i, j){
+  const a = ballPos(i), b = ballPos(j);
+  const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
+  if (d > 2*R + 1e-8) return 0;                          // ei puutu
+  const nx = dx/d, ny = dy/d;
+  const ti = [Math.cos(sim.th[i]), -Math.sin(sim.th[i])], tj = [Math.cos(sim.th[j]), -Math.sin(sim.th[j])];
+  const ci = ti[0]*nx + ti[1]*ny, cj = tj[0]*nx + tj[1]*ny;
+  const vn = L*sim.om[i]*ci - L*sim.om[j]*cj;             // lähenemiskiirus piki normaali
+  if (vn <= 1e-12) return 0;                              // ei lähene
+  const J = (1 + p.e)*vn / (ci*ci/sim.m[i] + cj*cj/sim.m[j]);
+  sim.om[i] -= J*ci/(sim.m[i]*L);
+  sim.om[j] += J*cj/(sim.m[j]*L);
+  return vn;
+}
+function resolveCollisions(){
+  // järjestikused kahe kuuli põrked, kuni ükski puutuv paar enam ei lähene
+  let vmax = 0;
+  for (let it = 0; it < 500; it++){
+    let hit = false;
+    for (let i = 0; i < sim.th.length - 1; i++){ const vn = pairCollide(i, i + 1); if (vn){ hit = true; vmax = Math.max(vmax, vn); } }
+    if (!hit) break;
+  }
+  return vmax;      // suurim lähenemiskiirus (0 – põrget polnud)
+}
+function overlapping(){
+  // kas mõni lähenev paar on üksteise sisse liikunud rohkem kui 10 nm
+  for (let i = 0; i < sim.th.length - 1; i++){
+    const a = ballPos(i), b = ballPos(i + 1);
+    if (Math.hypot(b.x - a.x, b.y - a.y) < 2*R - 1e-8 && sim.om[i] - sim.om[i + 1] > 0) return true;
+  }
+  return false;
+}
+function advance(h){ for (let i = 0; i < sim.th.length; i++){ sim.om[i] += -(g/L)*Math.sin(sim.th[i])*h; sim.th[i] += sim.om[i]*h; } }
+// Üks ajasamm. Kui kuulid liiguksid üksteise sisse, poolitatakse sammu, kuni põrge leitakse täpselt
+// puutumise hetkel (muidu kuhjuksid väikesed vead ja keskmised kuulid hakkaksid aja jooksul värisema).
+function step(dt){
+  const th0 = sim.th.slice(), om0 = sim.om.slice();
+  let h = dt;
+  for (;;){
+    advance(h);
+    if (!overlapping() || h < 1e-9) break;
+    sim.th = th0.slice(); sim.om = om0.slice(); h /= 2;
+  }
+  sim.t += h;
+  const Pa = momentum(), Ea = kinetic(), vsA = sim.om.map(w => L*w);
+  if (resolveCollisions() > 1e-3){      // väga väikesi puutumisi tulemustes ei näidata
+    const P1 = momentum(), E1 = kinetic(), vs1 = sim.om.map(w => L*w);
+    // põrked, mis järgnevad 5 ms jooksul, loetakse üheks põrkeks
+    if (sim.impact && sim.t - sim.impact.t1 < 0.005) Object.assign(sim.impact, {t1: sim.t, P1, E1, vs1});
+    else sim.impact = {t0: sim.t, t1: sim.t, P0: Pa, E0: Ea, vsB: vsA, P1, E1, vs1};
+    sim.impact.fresh = true;
+  }
+  return h;
+}
+function run(T){ let left = T; while (left > 1e-12) left -= step(Math.min(DT, left)); }
+/* ---------- joonistamine ---------- */
+let S = 400, OX = 0, OY = 60, BAR_TOP = 0;
+function layout(){
+  const span = p.N*2*R + 2*(L*Math.sin(rad(60)) + R + 0.01) + 0.04;
+  const narrow = W < 620;
+  const barsH = 34 + p.N*16;
+  S = Math.min((W - 30)/span, (H - OY - barsH - 70)/(L + R + 0.02), 1400);
+  OX = W/2; OY = narrow ? 52 : 70;
+  BAR_TOP = OY + (L + R)*S + 46;
+}
+const PX = x => OX + x*S, PY = y => OY + y*S;
+function text(x, y, t, color, size, align, weight){
+  ctx.save(); ctx.font = `${weight || 600} ${size || 12}px system-ui, sans-serif`; ctx.fillStyle = color; ctx.textAlign = align || 'center'; ctx.textBaseline = 'middle';
+  ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.strokeText(t, x, y); ctx.fillText(t, x, y); ctx.restore();
+}
+function arrow(x1, y1, x2, y2, color, w){
+  const L2 = Math.hypot(x2 - x1, y2 - y1); if (L2 < 3) return;
+  const ux = (x2 - x1)/L2, uy = (y2 - y1)/L2, hl = Math.min(10, L2*0.6);
+  ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = w || 2.5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2 - ux*hl*0.8, y2 - uy*hl*0.8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(x2 - ux*hl - uy*hl*0.45, y2 - uy*hl + ux*hl*0.45); ctx.lineTo(x2 - ux*hl + uy*hl*0.45, y2 - uy*hl - ux*hl*0.45); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+function draw(){
+  if (!W) return;
+  layout();
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+  const N = sim.th.length;
+  // raam
+  const fw = N*R + L*Math.sin(rad(60)) + R + 0.01,      // raam on nii lai, et tõstetud kuulid mahuvad sisse
+   fx1 = PX(-fw), fx2 = PX(fw), fyB = PY(L + R + 0.03);
+  ctx.save(); ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(fx1, fyB); ctx.lineTo(fx1, OY - 6); ctx.lineTo(fx2, OY - 6); ctx.lineTo(fx2, fyB); ctx.stroke();
+  ctx.fillStyle = '#e2e8f0'; ctx.fillRect(fx1 - 30, fyB, fx2 - fx1 + 60, 8); ctx.restore();
+  // niidid ja kuulid
+  const rp = Math.max(4, R*S);
+  for (let i = 0; i < N; i++){
+    const b = ballPos(i), bx = PX(b.x), by = PY(b.y), px = PX(pivotX(i));
+    ctx.save(); ctx.strokeStyle = '#64748b'; ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.moveTo(px, OY - 6); ctx.lineTo(bx, by); ctx.stroke(); ctx.restore();
+  }
+  for (let i = 0; i < N; i++){
+    const b = ballPos(i), bx = PX(b.x), by = PY(b.y);
+    const heavy = sim.m[i] > M0*1.5;
+    const gr = ctx.createRadialGradient(bx - rp*0.35, by - rp*0.4, rp*0.1, bx, by, rp);
+    gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.45, heavy ? '#78716c' : '#cbd5e1'); gr.addColorStop(1, heavy ? '#292524' : '#475569');
+    ctx.save(); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(bx, by, rp, 0, 2*Math.PI); ctx.fill();
+    if (hover === i || (drag && drag.group.includes(i))){ ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 2.5; ctx.stroke(); }
+    ctx.restore();
+    text(bx, by + rp + 11, String(i + 1) + (heavy ? ' (2m)' : ''), '#475569', 11);
+    if (p.vec){
+      const v = L*sim.om[i];
+      if (Math.abs(v) > 0.02){
+        const k = Math.min(70, 0.18*S) / 1.0;        // px / (m/s)
+        const tx = Math.cos(sim.th[i]), ty = Math.sin(sim.th[i]);
+        arrow(bx, by - rp - 10, bx + v*k*tx, by - rp - 10 - v*k*ty, '#2563eb', 2.5);
+      }
+    }
+  }
+  // tõstenurk
+  if (!sim.running && sim.t === 0){
+    for (const side of [-1, 1]){
+      const idx = side < 0 ? 0 : N - 1;
+      if (Math.abs(sim.th[idx]) < 1e-6) continue;
+      const px = PX(pivotX(idx)), a = sim.th[idx], rr = Math.min(60, L*S*0.35);
+      ctx.save(); ctx.strokeStyle = '#94a3b8'; ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(px, OY - 6); ctx.lineTo(px, PY(L)); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle = '#a16207'; ctx.lineWidth = 1.5; ctx.beginPath();
+      ctx.arc(px, OY - 6, rr, Math.PI/2, Math.PI/2 - a, a > 0); ctx.stroke(); ctx.restore();
+      text(px + Math.sin(a/2)*(rr + 14), OY - 6 + Math.cos(a/2)*(rr + 14), Math.round(Math.abs(a)*180/Math.PI) + '°', '#a16207', 12);
+    }
+  }
+  drawBars();
+}
+function drawBars(){
+  const N = sim.th.length, top = BAR_TOP;
+  if (top + 30 + N*16 > H) return;
+  const narrow = W < 620;
+  const x0 = narrow ? 34 : Math.max(40, W/2 - 260), x1 = narrow ? W - 70 : Math.min(W - 90, W/2 + 260), zx = (x0 + x1)/2, half = (x1 - x0)/2;
+  const vmax = Math.max(0.2, v0(60));
+  ctx.save(); ctx.font = '600 13px system-ui, sans-serif'; ctx.fillStyle = '#111827'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText('Kuulide kiirus v (m/s), → paremale', x0 - (narrow ? 20 : 0), top); ctx.restore();
+  ctx.strokeStyle = '#9ca3af'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(zx, top + 12); ctx.lineTo(zx, top + 18 + N*16); ctx.stroke();
+  for (let i = 0; i < N; i++){
+    const y = top + 18 + i*16, v = L*sim.om[i], w = v/vmax*half;
+    text(x0 - (narrow ? 14 : 12), y + 6, String(i + 1), '#475569', 11);
+    ctx.fillStyle = '#2563eb'; ctx.fillRect(Math.min(zx, zx + w), y, Math.abs(w), 12);
+    if (Math.abs(v) > 0.005) text(zx + w + (w >= 0 ? 6 : -6), y + 6, fmt(v), '#1e40af', 11, w >= 0 ? 'left' : 'right');
+  }
+}
+
+/* ---------- tulemused ---------- */
+function readout(){
+  let h = '';
+  const vL = v0(p.alpha);
+  h += `<div>Kiirus alumises punktis: v = √(2gL(1 − cos α)) = <b>${fmt(vL)} m/s</b></div>`;
+  const im = sim.impact;
+  if (!im){ h += `<div class="small" style="margin-top:4px">Põrke andmed ilmuvad pärast esimest põrget.</div>`; }
+  else {
+    const moving = vs => vs.map((v, i) => Math.abs(v) > 0.02*Math.max(...vs.map(Math.abs)) ? i + 1 : null).filter(x => x !== null);
+    h += `<div class="box"><b>Viimane põrge</b><table class="t"><tr><th></th><th>enne</th><th>pärast</th></tr>
+      <tr><td>koguimpulss Σp (kg·m/s)</td><td>${fmt(im.P0, 3)}</td><td>${fmt(im.P1, 3)}</td></tr>
+      <tr><td>kineetiline energia ΣEₖ (J)</td><td>${fmt(im.E0, 4)}</td><td>${fmt(im.E1, 4)}</td></tr>
+      <tr><td>liikuvad kuulid</td><td>${moving(im.vsB).join(', ') || '–'}</td><td>${moving(im.vs1).join(', ') || '–'}</td></tr></table>`;
+    const lost = im.E0 - im.E1;
+    h += `<div class="small">Impulss on jääv${Math.abs(lost) < 1e-6*Math.max(1e-9, im.E0) + 1e-9 ? ', kineetiline energia on jääv (elastsed põrked).' : `; kineetilisest energiast muutus soojuseks ${fmt(100*lost/im.E0, 1)}%.`}</div></div>`;
+  }
+  h += `<div class="small">Koguenergia praegu (Eₖ + Eₚ): <b>${fmt(kinetic() + potential(), 4)} J</b></div>`;
+  $('readout').innerHTML = h;
+}
+function why(){
+  const k = p.k, j = p.j;
+  let h = '';
+  if (k === 0 || j > 0 || p.heavy){
+    h += `<div class="small">Arvutus on tehtud juhuks, kui kuulid on võrdse massiga ja tõstetakse ainult vasakult poolt (vali nt näide „2 kuuli“).</div>`;
+    $('why').innerHTML = h; return;
+  }
+  const v = v0(p.alpha), m = M0, P = k*m*v, E = k*m*v*v/2;
+  h += `<div>${k > 1 ? 'Põrkavad' : 'Põrkab'} <b>${k}</b> kuul${k > 1 ? 'i' : ''} kiirusega v = ${fmt(v)} m/s:<br>impulss p = ${k}·m·v = ${fmt(P, 3)} kg·m/s, energia Eₖ = ${k}·m·v²/2 = ${fmt(E, 4)} J.</div>`;
+  h += `<div style="margin-top:4px">Kui teiselt poolt lendaks välja <b>n</b> kuuli ühesuguse kiirusega u, siis impulsi jäävusest u = ${k}·v/n. Kas ka energia klapib?</div>`;
+  h += `<table class="t"><tr><th>n</th><th>u (m/s)</th><th>p′</th><th>Eₖ′ (J)</th><th>Eₖ′/Eₖ</th></tr>`;
+  for (let n = 1; n <= p.N - (k === p.N ? 0 : 0); n++){
+    const u = k*v/n, Ep = n*m*u*u/2;
+    h += `<tr class="${n === k ? 'ok' : ''}"><td>${n}</td><td>${fmt(u)}</td><td>${fmt(n*m*u, 3)}</td><td>${fmt(Ep, 4)}</td><td>${fmt(Ep/E, 2)}${n === k ? ' ✓' : ''}</td></tr>`;
+  }
+  h += `</table><div class="small">Impulsi jäävus lubab iga n väärtust, aga kineetiline energia Eₖ′ = Eₖ·${k}/n on õige ainult siis, kui n = ${k}. Seega elastsel põrkel lendab välja sama palju kuule, kui sisse põrkas, ja sama kiirusega. (Eeldus: väljuvad kuulid liiguvad ühesuguse kiirusega ja ülejäänud jäävad paigale – simulatsioonis tuleb see tulemus välja järjestikustest kahe kuuli põrgetest.)</div>`;
+  $('why').innerHTML = h;
+}
+
+/* ---------- juhtimine ---------- */
+function updBtn(){ $('btnRun').textContent = sim.running ? '⏸ Peata' : (sim.t > 0 ? '▶ Jätka' : '▶ Lase lahti'); }
+$('btnRun').onclick = () => { $('hint').style.opacity = '0'; sim.running = !sim.running; updBtn(); };
+$('btnReset').onclick = reset;
+$('speed').oninput = e => { p.speed = +e.target.value; $('speedVal').textContent = p.speed < 1 ? 'aegluubis ' + Math.round(1/p.speed*10)/10 + '×' : 'tegelik kiirus'; };
+function bind(id, key, lo, hi, rid, int){
+  const el = $(id);
+  const set = v => { if (!isFinite(v) || v < lo || v > hi) return; if (int) v = Math.round(v); p[key] = v; if (document.activeElement !== el) el.value = v; if (rid) $(rid).value = v; clampKJ(); reset(); };
+  el.oninput = () => set(parseFloat(String(el.value).replace(',', '.')));
+  if (rid) $(rid).oninput = e => { el.value = e.target.value; set(+e.target.value); };
+}
+function clampKJ(){
+  p.k = Math.min(p.k, p.N - 1); p.j = Math.min(p.j, p.N - 1 - p.k);
+  $('nK').max = p.N - 1; $('nJ').max = p.N - 1;
+}
+function syncInputs(){
+  $('nN').value = p.N; $('nK').value = p.k; $('nJ').value = p.j; $('nA').value = p.alpha; $('rA').value = p.alpha;
+  $('nE').value = p.e; $('rE').value = p.e; $('cHeavy').checked = p.heavy; $('cVec').checked = p.vec;
+}
+bind('nN', 'N', 2, 7, null, true); bind('nK', 'k', 0, 6, null, true); bind('nJ', 'j', 0, 6, null, true);
+bind('nA', 'alpha', 5, 60, 'rA'); bind('nE', 'e', 0.5, 1, 'rE');
+$('nN').addEventListener('change', syncInputs); $('nK').addEventListener('change', syncInputs); $('nJ').addEventListener('change', syncInputs);
+$('cHeavy').onchange = e => { p.heavy = e.target.checked; reset(); };
+$('cVec').onchange = e => { p.vec = e.target.checked; draw(); };
+const EX = {
+  '1':   {N:5, k:1, j:0, e:1, heavy:false},
+  '2':   {N:5, k:2, j:0, e:1, heavy:false},
+  '3':   {N:5, k:3, j:0, e:1, heavy:false},
+  both:  {N:5, k:1, j:1, e:1, heavy:false},
+  '21':  {N:5, k:2, j:1, e:1, heavy:false},
+  loss:  {N:5, k:1, j:0, e:0.9, heavy:false},
+};
+document.querySelectorAll('[data-ex]').forEach(b => b.onclick = () => { $('hint').style.opacity = '0'; Object.assign(p, EX[b.dataset.ex]); syncInputs(); reset(); sim.running = true; updBtn(); });
+
+/* ---------- lohistamine ---------- */
+let hover = null, drag = null;
+function evPos(e){ const r = cv.getBoundingClientRect(); return {x: e.clientX - r.left, y: e.clientY - r.top}; }
+function hitBall(q){
+  const rp = Math.max(4, R*S) + (TOUCH ? 16 : 5);
+  let best = null, bd = Infinity;
+  for (let i = 0; i < sim.th.length; i++){
+    const b = ballPos(i), d = Math.hypot(q.x - PX(b.x), q.y - PY(b.y));
+    if (d < rp && d < bd){ bd = d; best = i; }
+  }
+  return best;
+}
+function setDrag(i, q){
+  // nurk riputuspunkti suhtes; vasakule tõstes tõusevad ka kõik kuulid vasakul, paremale tõstes paremal
+  const N = sim.th.length, px = PX(pivotX(i)), dx = q.x - px, dy = Math.max(1, q.y - (OY - 6));
+  let a = Math.atan2(dx, dy); const lim = rad(60); a = Math.max(-lim, Math.min(lim, a));
+  a = rad(Math.round(a*180/Math.PI));               // täiskraadideni, et paneeli nurk klapiks
+  const group = [];
+  if (a < 0){ for (let k = 0; k <= i; k++){ sim.th[k] = a; group.push(k); } for (let k = i + 1; k < N; k++) if (sim.th[k] < 0) sim.th[k] = 0; }
+  else if (a > 0){ for (let k = i; k < N; k++){ sim.th[k] = a; group.push(k); } for (let k = 0; k < i; k++) if (sim.th[k] > 0) sim.th[k] = 0; }
+  else { sim.th[i] = 0; group.push(i); }
+  drag.group = group;
+}
+cv.addEventListener('pointerdown', e => {
+  const q = evPos(e), i = hitBall(q);
+  if (i === null) return;
+  $('hint').style.opacity = '0';
+  if (sim.running || sim.t > 0){
+    // kuulid püütakse kinni: kõik peatuvad tasakaaluasendis
+    sim.running = false; sim.t = 0; sim.impact = null;
+    sim.th.fill(0);
+  }
+  sim.om.fill(0);
+  drag = {i, group: [i]}; cv.setPointerCapture(e.pointerId);
+  setDrag(i, q); draw();
+});
+cv.addEventListener('pointermove', e => {
+  const q = evPos(e);
+  if (drag){ setDrag(drag.i, q); readout(); draw(); return; }
+  const h = hitBall(q);
+  if (h !== hover){ hover = h; cv.style.cursor = h !== null ? 'grab' : 'default'; draw(); }
+});
+const endDrag = () => {
+  if (!drag) return;
+  drag = null;
+  // tõstetud kuulide arv ja nurk paneelile
+  const N = sim.th.length;
+  let k = 0; while (k < N && sim.th[k] < -1e-9) k++;
+  let j = 0; while (j < N && sim.th[N - 1 - j] > 1e-9) j++;
+  p.k = k; p.j = j;
+  const a = k ? -sim.th[0] : (j ? sim.th[N - 1] : 0);
+  if (a) p.alpha = Math.round(a*180/Math.PI);
+  syncInputs(); why();
+  sim.t = 0; sim.impact = null;
+  if (k || j){ sim.running = true; }
+  updBtn(); readout(); draw();
+};
+cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
+cv.addEventListener('pointerleave', () => { if (!drag && !TOUCH){ hover = null; draw(); } });
+
+/* ---------- tsükkel ---------- */
+let last = performance.now(), lastRO = 0;
+function loop(t){
+  const dt = Math.min(0.05, (t - last)/1000); last = t;
+  if (sim.running){
+    run(dt*p.speed);
+    draw();
+    if (t - lastRO > 150 || (sim.impact && sim.impact.fresh)){ lastRO = t; if (sim.impact) sim.impact.fresh = false; readout(); }
+  }
+  requestAnimationFrame(loop);
+}
+function resize(){
+  const r = main.getBoundingClientRect();
+  W = Math.max(300, Math.floor(r.width)); H = Math.max(360, Math.floor(r.height));
+  DPR = window.devicePixelRatio || 1;
+  cv.width = Math.round(W*DPR); cv.height = Math.round(H*DPR);
+  cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  draw();
+}
+new ResizeObserver(resize).observe(main);
+if (/github\.io$/.test(location.hostname)) $('back').style.display = 'block';
+if (TOUCH) $('hint').textContent = 'Haara sõrmega kuulist, tõsta kõrvale ja lase lahti';
+syncInputs(); $('speed').dispatchEvent(new Event('input'));
+reset(); resize(); requestAnimationFrame(loop);
+window.__nc = {PX, PY, ballPos, p, sim, reset, step, run, momentum, kinetic, potential, v0, draw, L, R, g, DT};
+</script>
+</body>
+</html>

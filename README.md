@@ -11,5 +11,6 @@ Interaktiivsed õppevahendid füüsikatundideks: https://vanakrt.github.io/
 | Keha kaldpinnal | `kaldpind/` | https://vanakrt.github.io/kaldpind/ |
 | Kaldu visatud keha | `visatud/` | https://vanakrt.github.io/visatud/ |
 | Põrked – impulsi ja energia jäävus | `porked/` | https://vanakrt.github.io/porked/ |
+| Newtoni pendel | `newton/` | https://vanakrt.github.io/newton/ |
 
 Iga simulatsioon on üks iseseisev `index.html` ilma väliste sõltuvusteta. Uue simulatsiooni lisamiseks tee uus kaust ja lisa avalehele (`index.html`) uus kaart.
