@@ -76,6 +76,7 @@
 
     <h2>Kasutamine</h2>
     <div class="small">
+      • Kaldenurka saab muuta ka kaldpinna ülemisest tipust (ring) lohistades.<br>
       • Telg on suunatud mööda kaldpinda üles; positiivne kiirus ja jõud tähendavad liikumist või mõju üles.<br>
       • Raskusjõud mg jaguneb komponentideks mööda kaldpinda (mg·sin α) ja risti kaldpinnaga (mg·cos α). Toereaktsioonijõud N = mg·cos α (kui lisajõud on kaldpinnaga paralleelne).<br>
       • Seisuhõõrdejõud on täpselt nii suur, kui on vaja keha paigal hoidmiseks, kuid ei saa ületada väärtust μ<sub>s</sub>·N. Kui see ei piisa, hakkab keha libisema ja mõjub liugehõõrdejõud F<sub>h</sub> = μ<sub>l</sub>·N, mis on vastassuunas liikumisega.<br>
@@ -96,6 +97,7 @@ const G = 9.81, LEN = 6, S0 = 4, BOX = 0.7;
 const p = { alpha:30, m:2, mu:0.3, twoMu:false, muK:0.25, F:0, v0:0, comp:true, net:true, vel:false, graph:true };
 const sim = { t:0, s:S0, v:0, running:false, ended:null, hist:[] };
 const DEG = Math.PI/180;
+let dragAnchor = null, hoverTop = false, topPx = [0, 0];
 
 /* ---------- abifunktsioonid ---------- */
 const comma = s => String(s).replace('.', ',');
@@ -176,13 +178,17 @@ function draw(){
   // mõõtkava: kaldpind mahub joonisele igal nurgal
   S = Math.min((W - 160)/LEN, (H - 170)/LEN);
   const w = LEN*ca*S, h = LEN*sa*S;
-  O = [W/2 - w/2, H/2 + h/2 + 30];
+  O = dragAnchor ? dragAnchor : [W/2 - w/2, H/2 + h/2 + 30];   // lohistamise ajal alumine tipp paigal
   // maapind ja kaldpind
   ctx.fillStyle = '#e7e5e4'; ctx.fillRect(0, O[1], W, H - O[1]);
   ctx.strokeStyle = '#57534e'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, O[1]); ctx.lineTo(W, O[1]); ctx.stroke();
   const top = toPx(LEN*ca, LEN*sa), corner = toPx(LEN*ca, 0);
   ctx.fillStyle = '#f5f0e6'; ctx.strokeStyle = '#78716c'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(O[0], O[1]); ctx.lineTo(top[0], top[1]); ctx.lineTo(corner[0], corner[1]); ctx.closePath(); ctx.fill(); ctx.stroke();
+  // ülemise tipu käepide (lohistades muutub kaldenurk)
+  ctx.save(); ctx.beginPath(); ctx.arc(top[0], top[1], hoverTop || dragAnchor ? 10 : 7, 0, 2*Math.PI);
+  ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.strokeStyle = '#78716c'; ctx.lineWidth = 2; ctx.fill(); ctx.stroke(); ctx.restore();
+  topPx = top;
   // nurk α
   if (p.alpha > 0){
     ctx.save(); ctx.strokeStyle = '#1f2937'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(O[0], O[1], 46, -a, 0); ctx.stroke(); ctx.restore();
@@ -337,6 +343,25 @@ function resize(){
   cv.style.width = W + 'px'; cv.style.height = H + 'px';
   draw();
 }
+// kaldenurga muutmine ülemisest tipust lohistades
+function evPos(e){ const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+cv.addEventListener('pointerdown', e => {
+  const [x, y] = evPos(e);
+  if (Math.hypot(x - topPx[0], y - topPx[1]) < 16){ dragAnchor = O.slice(); sim.running = false; updRunBtn(); cv.setPointerCapture(e.pointerId); }
+});
+cv.addEventListener('pointermove', e => {
+  const [x, y] = evPos(e);
+  if (dragAnchor){
+    let a = Math.atan2(dragAnchor[1] - y, x - dragAnchor[0])/DEG;
+    a = Math.max(0, Math.min(70, Math.round(a*2)/2));
+    if (a !== p.alpha){ p.alpha = a; $('nA').value = a; $('rA').value = a; reset(); }
+    return;
+  }
+  const h = Math.hypot(x - topPx[0], y - topPx[1]) < 16;
+  if (h !== hoverTop){ hoverTop = h; cv.style.cursor = h ? 'grab' : 'default'; draw(); }
+});
+const endTop = () => { if (dragAnchor){ dragAnchor = null; draw(); } };
+cv.addEventListener('pointerup', endTop); cv.addEventListener('pointercancel', endTop);
 new ResizeObserver(resize).observe(main);
 if (/github\.io$/.test(location.hostname)) $('back').style.display = 'block';
 reset(); resize(); requestAnimationFrame(loop);
