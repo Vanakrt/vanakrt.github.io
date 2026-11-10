@@ -83,6 +83,15 @@
       <input type="number" id="alphaN" min="0" max="89.9" step="0.5" value="40"> <span class="unit">°</span>
     </div>
     <div class="small" id="signNote" style="margin:-4px 0 8px"></div>
+    <div style="margin-bottom:8px">
+      <div class="small" style="margin-bottom:4px">Paralleelsed kiired</div>
+      <div class="types" id="beamBtns" style="grid-template-columns:1fr 1fr">
+        <button data-b="one">1 kiir</button>
+        <button data-b="c3">3 kiirt lähestikku</button>
+        <button data-b="w3">3 kiirt hõredalt</button>
+        <button data-b="p5">5 kiirt</button>
+      </div>
+    </div>
     <div id="rowSide" style="margin-bottom:8px">
       <div class="small" style="margin-bottom:4px">Valgusallikas asub</div>
       <div class="types" style="grid-template-columns:1fr 1fr" id="sideBtns">
@@ -92,6 +101,14 @@
     </div>
     <div class="row" id="rowD">
       <label>Plaadi paksus d <input type="number" id="plateD" min="0.5" max="12" step="0.5" value="6"> <span class="unit">cm</span></label>
+    </div>
+    <div id="rowPType" style="margin-bottom:8px">
+      <div class="small" style="margin-bottom:4px">Prisma</div>
+      <div class="types" id="pTypes">
+        <button data-p="normal">Tavaline (φ)</button>
+        <button data-p="rt90">Täisnurkne: pööre 90°</button>
+        <button data-p="rt180">Täisnurkne: pööre 180°</button>
+      </div>
     </div>
     <div class="row" id="rowPhi">
       <label>Prisma murdev nurk φ <input type="number" id="phi" min="10" max="100" step="1" value="60"> <span class="unit">°</span></label>
@@ -127,6 +144,7 @@
       • Osaliselt peegeldunud kiirte heledus vastab polariseerimata valguse peegeldumisteguritele (Fresneli valemid); joonisel on näidatud kiired, mille intensiivsus on üle 2% algsest.<br>
       • Tasaparalleelsest plaadist väljuv kiir on langevaga paralleelne, kuid nihkunud: Δ = d·sin(α − β)/cos β.<br>
       • Prisma kõrvalekaldenurk δ = α₁ + β₂ − φ. Minimaalne kõrvalekalle on siis, kui kiir läbib prismat sümmeetriliselt: n·sin(φ/2) = n₀·sin((δ<sub>min</sub> + φ)/2).<br>
+      • Täisnurkse prisma (nurgad 45°, 90°, 45°) hüpotenuusi tahule langeb risti sisenenud kiir 45° nurga all. Klaasis (n = 1,52) on piirnurk 41,1°, seega toimub täielik sisepeegeldus ja kiire suund pöördub 90° (üks peegeldus) või 180° (kaks peegeldust, nagu binokli prismades). Paralleelsete kiirte järjekord pöördub.<br>
       • Prisma korral võib langev kiir olla ristsirge mõlemal pool: α &gt; 0 – kiir tuleb prisma aluse poolt, α &lt; 0 – tipu poolt.<br>
       • Valgusjuht: kiir jääb valgusjuhi sisse, kui langemisnurk külgpinnal on suurem kui piirnurk (sin α<sub>p</sub> = n<sub>väljas</sub>/n<sub>südamik</sub>). Liiga järsu painutuse korral langeb kiir külgpinnale väiksema nurga all ja osa valgusest väljub. Sirge valgusjuhi vastuvõtunurk: n₀·sin θ<sub>max</sub> = √(n<sub>südamik</sub>² − n<sub>väljas</sub>²). Joonis on tasapinnaline (2D) läbilõige.<br>
       • Dispersioon on arvutatud Cauchy valemiga n(λ) = n<sub>D</sub> + B(1/λ² − 1/λ<sub>D</sub>²), kus B on materjalile ligikaudu sobiv konstant. Värvid on joonisel ligikaudsed.
@@ -168,8 +186,10 @@ const st = {
     fiber: {o:{mat:'air', n:1.000}, i:{mat:'crown', n:1.520}, c:{mat:'custom', n:1.460}},
   },
   fiber: {pts:null, shape:'straight', w:2.4, clad:false, t:0.6},
+  prismType:'normal', beam:'one',
   drawMode:false,
 };
+const BEAMS = {one:[0], c3:[-0.5, 0, 0.5], w3:[-1.6, 0, 1.6], p5:[-2, -1, 0, 1, 2]};   // kiirte nihked (cm) risti kiirega
 const SIGNED = () => st.scene === 'prism' || st.scene === 'fiber';   // langemisnurk võib olla negatiivne
 
 /* ---------- abifunktsioonid ---------- */
@@ -213,6 +233,16 @@ function sceneGeom(){
     return {polys:[poly], pmed:['i'], edges:polyEdges(poly), Hp:[-5, top], nOut:[0,1], L:12};
   }
   if (st.scene === 'fiber') return fiberGeom();
+  if (st.prismType === 'rt90'){
+    // täisnurk all vasakul: vasak tahk püstine, alumine rõhtne, hüpotenuus diagonaalis
+    const h = 10, A = [-h/2, h/2], B = [-h/2, -h/2], C = [h/2, -h/2];
+    return {polys:[[A, B, C]], pmed:['i'], edges:polyEdges([A, B, C], ['leg1', 'leg2', 'hyp']), Hp:[-h/2, 0], nOut:[-1, 0], L:11, labelAt:true};
+  }
+  if (st.prismType === 'rt180'){
+    // hüpotenuus püstine vasakul, täisnurk paremal
+    const h = 12, A = [-h/4, h/2], B = [-h/4, -h/2], C = [h/4, 0];
+    return {polys:[[A, B, C]], pmed:['i'], edges:polyEdges([A, B, C], ['hyp', 'leg2', 'leg1']), Hp:[-h/4, h/4], nOut:[-1, 0], L:11, labelAt:true};
+  }
   // prisma: tipp üleval, kõrgus h
   const h = 12, phi = st.phi*DEG, hb = h*Math.tan(phi/2);
   const apex = [0, h/2], bl = [-hb, -h/2], br = [hb, -h/2];
@@ -460,6 +490,8 @@ function drawMedia(g){
     ctx.fillText('väljas: ' + nm(M.o), 14, 14);
     ctx.fillText('valgusjuht: ' + nm(M.i), 14, 32);
     if (st.fiber.clad) ctx.fillText('kate: n = ' + comma(M.c.n.toFixed(3)), 14, 50);
+  } else if (g.labelAt){
+    ctx.fillText(nm(M.o), 14, 14); ctx.fillText('prisma: ' + nm(M.i), 14, 32);
   } else {
     ctx.fillText(nm(M.o), 14, 14); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(nm(M.i), X(0), Y(-3.5));
   }
@@ -468,9 +500,12 @@ function drawMedia(g){
 function drawSource(S, dir){
   const x = X(S[0]), y = Y(S[1]);
   const ang = Math.atan2(-dir[1], dir[0]);
+  const offs = BEAMS[st.beam], lo = Math.min(...offs)*st.S, hi = Math.max(...offs)*st.S;
   ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
-  ctx.fillStyle = '#334155'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(-34, -9, 36, 18, 4) : ctx.rect(-34, -9, 36, 18); ctx.fill();
-  ctx.fillStyle = st.white ? '#fde68a' : '#ef4444'; ctx.fillRect(-2, -4, 5, 8);
+  // maailmas on nihe +o kiirest vasakul (vastupäeva); pööratud ekraanikoordinaatides on see −o
+  ctx.fillStyle = '#334155'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(-34, -hi - 9, 36, hi - lo + 18, 4) : ctx.rect(-34, -hi - 9, 36, hi - lo + 18); ctx.fill();
+  ctx.fillStyle = st.white ? '#fde68a' : '#ef4444';
+  for (const o of offs) ctx.fillRect(-2, -o*st.S - 4, 5, 8);
   ctx.restore();
   ctx.save(); ctx.beginPath(); ctx.arc(x, y, 7, 0, 2*Math.PI); ctx.strokeStyle = '#334155'; ctx.lineWidth = 2; ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fill(); ctx.stroke(); ctx.restore();
 }
@@ -511,18 +546,22 @@ function draw(){
     line(X(g.Hp[0]), Y(g.Hp[1]), X(P[0]), Y(P[1]), '#a16207', 1.4, [3, 4]);
     label(X(P[0]) - 10, Y(P[1]) - 12, 'piirnurk ' + fmt(ac/DEG) + '°', '#a16207', 12);
   }
-  // kiired
+  // kiired (paralleelse kimbu korral iga kiir eraldi; nurgad ja tulemused keskmise kiire järgi)
+  const perp = [-dir[1], dir[0]];
+  const starts = BEAMS[st.beam].map(o => [S[0] + perp[0]*o, S[1] + perp[1]*o]);
   if (st.white){
     // langev valge kiir ühe joonena, edasi iga lainepikkus eraldi
-    const first = res.segs[0];
-    for (const lam of WAVES){
-      const r = trace(S, dir, lam, {refl:false});
-      for (const s of r.segs) if (s.depth > 0) drawSeg(s, wavelengthRGB(lam), 2);
+    for (const S0 of starts){
+      for (const lam of WAVES){
+        const r = trace(S0, dir, lam, {refl:false});
+        for (const s of r.segs) if (s.depth > 0) drawSeg(s, wavelengthRGB(lam), 2);
+      }
+      drawSeg(trace(S0, dir, null, {refl:false}).segs[0], '#334155', 3);
     }
-    drawSeg(first, '#334155', 3);
   } else {
-    for (const s of res.segs.filter(s => !s.main)) drawSeg(s, '#dc2626', 2.4);
-    for (const s of res.segs.filter(s => s.main)) drawSeg(s, '#dc2626', 2.8);
+    const all = starts.map((S0, k) => BEAMS[st.beam][k] === 0 ? res : trace(S0, dir, null, {refl: st.refl}));
+    for (const r of all) for (const s of r.segs.filter(s => !s.main)) drawSeg(s, '#dc2626', 2.4);
+    for (const r of all) for (const s of r.segs.filter(s => s.main)) drawSeg(s, '#dc2626', 2.8);
   }
   // nurkade kaared
   if (st.angles){
@@ -604,9 +643,16 @@ function readout(res, g){
     }
   } else if (st.scene === 'prism'){
     const phi = st.phi, nr = nI/nO;
-    const NAME = {left:'vasak tahk', right:'parem tahk', base:'alus'};
-    h += `<div>Murdev nurk <b>φ = ${fmt(phi, 0)}°</b>, suhteline murdumisnäitaja n₂/n₁ = ${fmt(nr, 3)}</div>`;
-    h += `<div class="small">${a > 0 ? 'Kiir langeb ristsirge aluse poolt (α > 0).' : (a < 0 ? 'Kiir langeb ristsirge tipu poolt (α < 0).' : 'Kiir langeb piki ristsirget.')}</div>`;
+    const NAME = st.prismType === 'rt90' ? {leg1:'vasak tahk', hyp:'hüpotenuusi tahk', leg2:'alumine tahk'}
+      : st.prismType === 'rt180' ? {hyp:'hüpotenuusi tahk', leg1:'ülemine tahk', leg2:'alumine tahk'}
+      : {left:'vasak tahk', right:'parem tahk', base:'alus'};
+    const RT = st.prismType !== 'normal';
+    if (RT){
+      const crit = nr > 1 ? Math.asin(1/nr)/DEG : 90;
+      h += `<div>Täisnurkne prisma (45° – 90° – 45°), suhteline murdumisnäitaja n₂/n₁ = ${fmt(nr, 3)}</div>`;
+      h += `<div class="small">Piirnurk prismas α<sub>p</sub> = ${nr > 1 ? fmt(crit) + '°' : '– (prisma pole ümbrusest optiliselt tihedam)'}. Kui kiir siseneb risti (α = 0), langeb ta ${st.prismType === 'rt90' ? 'hüpotenuusi' : 'kaatetite'} tahule 45° nurga all: ${crit < 45 ? '45° &gt; α<sub>p</sub> → <b>täielik sisepeegeldus</b>' : '<span class="warn">45° &lt; α<sub>p</sub> → täielikku sisepeegeldust ei toimu, suurem osa valgusest läheb läbi</span>'}.</div>`;
+    } else h += `<div>Murdev nurk <b>φ = ${fmt(phi, 0)}°</b>, suhteline murdumisnäitaja n₂/n₁ = ${fmt(nr, 3)}</div>`;
+    if (!RT) h += `<div class="small">${a > 0 ? 'Kiir langeb ristsirge aluse poolt (α > 0).' : (a < 0 ? 'Kiir langeb ristsirge tipu poolt (α < 0).' : 'Kiir langeb piki ristsirget.')}</div>`;
     h += `<table>`;
     ev.slice(0, 6).forEach((e, k) => {
       h += `<tr><td>${k + 1}. ${NAME[e.tag] || ''}</td><td>α${'₁₂₃₄₅₆'[k]} = ${fmt(e.i/DEG)}°</td><td>${e.t !== null ? 'β' + '₁₂₃₄₅₆'[k] + ' = ' + fmt(e.t/DEG) + '°' : '<span class="warn">täielik sisepeegeldus</span>'}</td></tr>`;
@@ -619,12 +665,13 @@ function readout(res, g){
       const outFace = NAME[ev[ev.length - 1].tag];
       h += `<div>Kiir väljub: <b>${outFace}</b>. Kõrvalekaldenurk <b>δ = ${fmt(dev)}°</b></div>`;
       const e1 = ev[0], e2 = ev[1];
-      if (ev.length === 2 && e1.tag === 'left' && e2.tag === 'right' && e2.t !== null && a >= 0)
+      if (!RT && ev.length === 2 && e1.tag === 'left' && e2.tag === 'right' && e2.t !== null && a >= 0)
         h += `<div class="small">δ = α₁ + β₂ − φ = ${fmt(e1.i/DEG)}° + ${fmt(e2.t/DEG)}° − ${fmt(phi, 0)}° = ${fmt(e1.i/DEG + e2.t/DEG - phi)}°; kontroll: β₁ + α₂ = ${fmt((e1.t + e2.i)/DEG)}° = φ</div>`;
       else h += `<div class="small">δ on nurk langeva ja prismast väljuva kiire vahel.</div>`;
     }
     const sMin = nr*Math.sin(phi*DEG/2);
-    if (sMin <= 1){
+    if (RT){ /* täisnurksel prismal minimaalset kõrvalekallet ei näidata */ }
+    else if (sMin <= 1){
       const dmin = 2*Math.asin(sMin)/DEG - phi, asym = (dmin + phi)/2;
       h += `<div style="margin-top:4px">Minimaalne kõrvalekalle <b>δ<sub>min</sub> = ${fmt(dmin)}°</b>, kui α₁ = ${fmt(asym)}° (kiir läbib prismat sümmeetriliselt)</div>`;
     } else {
@@ -702,7 +749,10 @@ function syncUI(){
   const L = {iface:['Ülemine keskkond', 'Alumine keskkond'], plate:['Ümbritsev keskkond', 'Plaadi materjal'], prism:['Ümbritsev keskkond', 'Prisma materjal'], fiber:['Ümbritsev keskkond', 'Valgusjuhi materjal (südamik)']}[st.scene];
   $('lblO').textContent = L[0]; $('lblI').textContent = L[1];
   $('rowD').style.display = st.scene === 'plate' ? 'flex' : 'none';
-  $('rowPhi').style.display = st.scene === 'prism' ? 'flex' : 'none';
+  $('rowPhi').style.display = st.scene === 'prism' && st.prismType === 'normal' ? 'flex' : 'none';
+  $('rowPType').style.display = st.scene === 'prism' ? 'block' : 'none';
+  document.querySelectorAll('#pTypes button').forEach(b => b.classList.toggle('on', b.dataset.p === st.prismType));
+  document.querySelectorAll('#beamBtns button').forEach(b => b.classList.toggle('on', b.dataset.b === st.beam));
   $('rowCrit').style.display = st.scene === 'iface' ? 'flex' : 'none';
   $('rowSide').style.display = st.scene === 'iface' ? 'block' : 'none';
   $('rowFiber').style.display = st.scene === 'fiber' ? 'block' : 'none';
@@ -714,7 +764,7 @@ function syncUI(){
   $('btnDraw').textContent = st.drawMode ? '✖ Loobu (too eelmine valgusjuht tagasi)' : '✏️ Joonista valgusjuht ise';
   if (!SIGNED() && st.alpha < 0) st.alpha = -st.alpha;
   $('alpha').min = $('alphaN').min = SIGNED() ? -89.9 : 0;
-  $('signNote').textContent = st.scene === 'prism' ? 'Negatiivne α: kiir langeb ristsirge teiselt poolt (prisma tipu poolt).' : (st.scene === 'fiber' ? 'Negatiivne α: kiir langeb ristsirge teiselt poolt.' : '');
+  $('signNote').textContent = st.scene === 'prism' && st.prismType !== 'normal' ? 'Negatiivne α: kiir langeb ristsirge teiselt poolt.' : st.scene === 'prism' ? 'Negatiivne α: kiir langeb ristsirge teiselt poolt (prisma tipu poolt).' : (st.scene === 'fiber' ? 'Negatiivne α: kiir langeb ristsirge teiselt poolt.' : '');
   $('signNote').style.display = SIGNED() ? 'block' : 'none';
   syncSide();
   $('alpha').value = st.alpha; $('alphaN').value = +st.alpha.toFixed(1);
@@ -722,6 +772,10 @@ function syncUI(){
 }
 document.querySelectorAll('#scenes button').forEach(b => b.onclick = () => { st.scene = b.dataset.s; st.drawMode = false; fitScale(); syncUI(); setHint(); draw(); });
 document.querySelectorAll('#fiberShapes button').forEach(b => b.onclick = () => { st.fiber.shape = b.dataset.f; st.fiber.pts = FIBER_SHAPES[b.dataset.f](); st.drawMode = false; syncUI(); setHint(); draw(); });
+document.querySelectorAll('#pTypes button').forEach(b => b.onclick = () => {
+  st.prismType = b.dataset.p; if (st.prismType !== 'normal') st.alpha = 0;   // täisnurksele prismale risti
+  syncUI(); draw(); });
+document.querySelectorAll('#beamBtns button').forEach(b => b.onclick = () => { st.beam = b.dataset.b; syncUI(); draw(); });
 $('btnDraw').onclick = () => { st.drawMode = !st.drawMode; syncUI(); setHint(); draw(); };
 $('optClad').onchange = e => { st.fiber.clad = e.target.checked; syncUI(); draw(); };
 $('nC').oninput = e => { const v = parseFloat(String(e.target.value).replace(',', '.')); if (v >= 1 && v <= 4){ st.med.fiber.c.n = v; draw(); } };
