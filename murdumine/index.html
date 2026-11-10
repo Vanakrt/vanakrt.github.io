@@ -479,6 +479,15 @@ let placedLabels = [];
 function draw(){
   placedLabels = [];
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  if (st.scene === 'fiber' && st.drawMode){
+    // joonistamise ajal on vana valgusjuht ja kiired kustutatud – tühi leht, ainult uus joon
+    const M = st.med.fiber;
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+    if (M.o.n > 1.001){ ctx.fillStyle = `rgba(56,132,196,${Math.min(0.42, 0.06 + (M.o.n - 1)*0.28).toFixed(3)})`; ctx.fillRect(0, 0, W, H); }
+    drawFiberUI(null);
+    $('readout').innerHTML = '<div class="small">Joonista uus valgusjuht: vea joon ühest otsast teise. Valgus siseneb joone algusest.</div>';
+    return;
+  }
   const {g, S, dir} = sourceRay();
   drawMedia(g);
   const M = st.med[st.scene];
@@ -538,6 +547,7 @@ function draw(){
 
 function drawFiberUI(g){
   // sisenemisots (punane rõngas) ja juhtpunktid
+  if (g){
   const c0 = g.center[0];
   ctx.save(); ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 2; ctx.setLineDash([3, 3]);
   ctx.beginPath(); ctx.arc(X(c0[0]), Y(c0[1]), Math.max(10, st.fiber.w*st.S*0.7), 0, 2*Math.PI); ctx.stroke(); ctx.restore();
@@ -546,6 +556,7 @@ function drawFiberUI(g){
       ctx.save(); ctx.beginPath(); ctx.arc(X(q[0]), Y(q[1]), fHover === i || fDrag === i ? 8 : 5, 0, 2*Math.PI);
       ctx.fillStyle = fHover === i || fDrag === i ? 'rgba(37,99,235,.9)' : 'rgba(37,99,235,.6)'; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
     });
+  }
   }
   if (stroke && stroke.length > 1){
     ctx.save(); ctx.strokeStyle = '#2563eb'; ctx.lineWidth = Math.max(3, st.fiber.w*st.S); ctx.globalAlpha = 0.35; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
@@ -698,8 +709,9 @@ function syncUI(){
   $('rowClad').style.display = st.scene === 'fiber' ? 'block' : 'none';
   $('rowCladN').style.display = st.fiber.clad ? 'flex' : 'none';
   $('optClad').checked = st.fiber.clad; $('nC').value = st.med.fiber.c.n; $('cladT').value = st.fiber.t; $('fiberW').value = st.fiber.w;
-  document.querySelectorAll('#fiberShapes button').forEach(b => b.classList.toggle('on', b.dataset.f === st.fiber.shape));
+  document.querySelectorAll('#fiberShapes button').forEach(b => b.classList.toggle('on', !st.drawMode && b.dataset.f === st.fiber.shape));
   $('btnDraw').classList.toggle('on', st.drawMode);
+  $('btnDraw').textContent = st.drawMode ? '✖ Loobu (too eelmine valgusjuht tagasi)' : '✏️ Joonista valgusjuht ise';
   if (!SIGNED() && st.alpha < 0) st.alpha = -st.alpha;
   $('alpha').min = $('alphaN').min = SIGNED() ? -89.9 : 0;
   $('signNote').textContent = st.scene === 'prism' ? 'Negatiivne α: kiir langeb ristsirge teiselt poolt (prisma tipu poolt).' : (st.scene === 'fiber' ? 'Negatiivne α: kiir langeb ristsirge teiselt poolt.' : '');
