@@ -32,7 +32,7 @@
   #readout table{border-collapse:collapse;width:100%;font-size:12.5px}
   #readout td{padding:1px 4px 1px 0}
   .warn{background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:4px 8px;margin-top:6px}
-  #hint{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(31,41,55,.88);color:#fff;font-size:13px;padding:6px 12px;border-radius:8px;pointer-events:none;max-width:90%;text-align:center}
+  #hint{transition:opacity .4s;position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(31,41,55,.88);color:#fff;font-size:13px;padding:6px 12px;border-radius:8px;pointer-events:none;max-width:90%;text-align:center}
   #back{display:none;font-size:13px;margin-bottom:10px}
   #back a{color:#2563eb;text-decoration:none}
   @media (max-width:760px){
@@ -55,6 +55,7 @@
       <button data-s="iface">Kahe keskkonna piir</button>
       <button data-s="plate">Tasaparalleelne plaat</button>
       <button data-s="prism">Prisma</button>
+      <button data-s="fiber">Valgusjuht</button>
     </div>
 
     <h2>Keskkonnad</h2>
@@ -70,6 +71,10 @@
       </label>
       <label>n₂ <input type="number" id="nI" min="1" max="3" step="0.01"></label>
     </div>
+    <div id="rowClad">
+      <label class="chk"><input type="checkbox" id="optClad"> Valgusjuhil on kate (ümbris)</label>
+      <div class="row" id="rowCladN"><label>Katte murdumisnäitaja n<sub>k</sub> <input type="number" id="nC" min="1" max="3" step="0.01" value="1.46"></label><label>paksus <input type="number" id="cladT" min="0.2" max="2" step="0.1" value="0.6"> <span class="unit">cm</span></label></div>
+    </div>
     <div class="small" style="margin-bottom:6px">Murdumisnäitajad naatriumi kollase valguse (λ = 589 nm) jaoks.</div>
 
     <h2>Kiir ja geomeetria</h2>
@@ -77,6 +82,7 @@
       <label>Langemisnurk α <input type="range" id="alpha" min="0" max="89.9" step="0.1" value="40"></label>
       <input type="number" id="alphaN" min="0" max="89.9" step="0.5" value="40"> <span class="unit">°</span>
     </div>
+    <div class="small" id="signNote" style="margin:-4px 0 8px"></div>
     <div id="rowSide" style="margin-bottom:8px">
       <div class="small" style="margin-bottom:4px">Valgusallikas asub</div>
       <div class="types" style="grid-template-columns:1fr 1fr" id="sideBtns">
@@ -89,6 +95,18 @@
     </div>
     <div class="row" id="rowPhi">
       <label>Prisma murdev nurk φ <input type="number" id="phi" min="10" max="100" step="1" value="60"> <span class="unit">°</span></label>
+    </div>
+    <div id="rowFiber">
+      <div class="small" style="margin-bottom:4px">Valgusjuhi kuju</div>
+      <div class="types" id="fiberShapes" style="grid-template-columns:1fr 1fr">
+        <button data-f="straight">Sirge</button>
+        <button data-f="arc">Kaar</button>
+        <button data-f="s">S-kurv</button>
+        <button data-f="loop">Tugev painutus</button>
+      </div>
+      <button id="btnDraw" style="width:100%;margin:6px 0">✏️ Joonista valgusjuht ise</button>
+      <div class="row"><label>Läbimõõt <input type="number" id="fiberW" min="0.6" max="5" step="0.1" value="2.4"> <span class="unit">cm</span></label></div>
+      <div class="small">Painutamiseks lohista valgusjuhil olevaid siniseid punkte. Valgus siseneb vasakust (punase rõngaga) otsast.</div>
     </div>
 
     <h2>Kuva</h2>
@@ -109,6 +127,8 @@
       • Osaliselt peegeldunud kiirte heledus vastab polariseerimata valguse peegeldumisteguritele (Fresneli valemid); joonisel on näidatud kiired, mille intensiivsus on üle 2% algsest.<br>
       • Tasaparalleelsest plaadist väljuv kiir on langevaga paralleelne, kuid nihkunud: Δ = d·sin(α − β)/cos β.<br>
       • Prisma kõrvalekaldenurk δ = α₁ + β₂ − φ. Minimaalne kõrvalekalle on siis, kui kiir läbib prismat sümmeetriliselt: n·sin(φ/2) = n₀·sin((δ<sub>min</sub> + φ)/2).<br>
+      • Prisma korral võib langev kiir olla ristsirge mõlemal pool: α &gt; 0 – kiir tuleb prisma aluse poolt, α &lt; 0 – tipu poolt.<br>
+      • Valgusjuht: kiir jääb valgusjuhi sisse, kui langemisnurk külgpinnal on suurem kui piirnurk (sin α<sub>p</sub> = n<sub>väljas</sub>/n<sub>südamik</sub>). Liiga järsu painutuse korral langeb kiir külgpinnale väiksema nurga all ja osa valgusest väljub. Sirge valgusjuhi vastuvõtunurk: n₀·sin θ<sub>max</sub> = √(n<sub>südamik</sub>² − n<sub>väljas</sub>²). Joonis on tasapinnaline (2D) läbilõige.<br>
       • Dispersioon on arvutatud Cauchy valemiga n(λ) = n<sub>D</sub> + B(1/λ² − 1/λ<sub>D</sub>²), kus B on materjalile ligikaudu sobiv konstant. Värvid on joonisel ligikaudsed.
     </div>
   </aside>
@@ -145,8 +165,12 @@ const st = {
     iface: {o:{mat:'air', n:1.000}, i:{mat:'water', n:1.333}},
     plate: {o:{mat:'air', n:1.000}, i:{mat:'crown', n:1.520}},
     prism: {o:{mat:'air', n:1.000}, i:{mat:'crown', n:1.520}},
+    fiber: {o:{mat:'air', n:1.000}, i:{mat:'crown', n:1.520}, c:{mat:'custom', n:1.460}},
   },
+  fiber: {pts:null, shape:'straight', w:2.4, clad:false, t:0.6},
+  drawMode:false,
 };
+const SIGNED = () => st.scene === 'prism' || st.scene === 'fiber';   // langemisnurk võib olla negatiivne
 
 /* ---------- abifunktsioonid ---------- */
 const comma = s => String(s).replace('.', ',');
@@ -174,21 +198,109 @@ function wavelengthRGB(nm){
 
 /* ---------- stseenid ---------- */
 // Tagastab: polügonid (keskkond 'i'), tabamispunkt Hp, välisnormaal nOut (pinnal, kuhu valgus langeb)
+function polyEdges(poly, tags){
+  const E = [];
+  for (let k = 0; k < poly.length; k++) E.push({a:poly[k], b:poly[(k + 1) % poly.length], tag: tags ? tags[k] : 'surf'});
+  return E;
+}
 function sceneGeom(){
   if (st.scene === 'iface'){
-    return {polys:[[[-300,0],[300,0],[300,-300],[-300,-300]]], Hp:[0,0], nOut: st.below ? [0,-1] : [0,1], L:13};
+    const poly = [[-300,0],[300,0],[300,-300],[-300,-300]];
+    return {polys:[poly], pmed:['i'], edges:polyEdges(poly), Hp:[0,0], nOut: st.below ? [0,-1] : [0,1], L:13};
   }
   if (st.scene === 'plate'){
-    const d = st.d, top = d/2;
-    return {polys:[[[-300,top],[300,top],[300,-d/2],[-300,-d/2]]], Hp:[-5, top], nOut:[0,1], L:12};
+    const d = st.d, top = d/2, poly = [[-300,top],[300,top],[300,-d/2],[-300,-d/2]];
+    return {polys:[poly], pmed:['i'], edges:polyEdges(poly), Hp:[-5, top], nOut:[0,1], L:12};
   }
+  if (st.scene === 'fiber') return fiberGeom();
   // prisma: tipp üleval, kõrgus h
   const h = 12, phi = st.phi*DEG, hb = h*Math.tan(phi/2);
   const apex = [0, h/2], bl = [-hb, -h/2], br = [hb, -h/2];
   const fx = apex[0] - bl[0], fy = apex[1] - bl[1], fl = Math.hypot(fx, fy);
   const nOut = [-fy/fl, fx/fl];                     // vasaku tahu välisnormaal
   const Hp = [(apex[0] + bl[0])/2, (apex[1] + bl[1])/2];
-  return {polys:[[apex, br, bl]], Hp, nOut, L:11};
+  const poly = [apex, br, bl];
+  return {polys:[poly], pmed:['i'], edges:polyEdges(poly, ['right', 'base', 'left']), Hp, nOut, L:11};
+}
+
+/* ---------- valgusjuht ---------- */
+// Kesjoon on tsentripetaalne Catmull-Romi splain läbi juhtpunktide; valgusjuht on sellest ±w/2 kaugusel olev riba.
+function crPoint(p0, p1, p2, p3, t){
+  const d = (a, b) => Math.max(1e-4, Math.sqrt(Math.hypot(b[0] - a[0], b[1] - a[1])));
+  const t0 = 0, t1 = t0 + d(p0, p1), t2 = t1 + d(p1, p2), t3 = t2 + d(p2, p3);
+  const tt = t1 + (t2 - t1)*t;
+  const L = (a, b, ta, tb) => { const w = (tt - ta)/(tb - ta); return [a[0] + (b[0] - a[0])*w, a[1] + (b[1] - a[1])*w]; };
+  const A1 = L(p0, p1, t0, t1), A2 = L(p1, p2, t1, t2), A3 = L(p2, p3, t2, t3);
+  return L(L(A1, A2, t0, t2), L(A2, A3, t1, t3), t1, t2);
+}
+function spline(pts){
+  const n = pts.length, out = [];
+  const ext = (a, b) => [2*a[0] - b[0], 2*a[1] - b[1]];
+  const P = [ext(pts[0], pts[1]), ...pts, ext(pts[n - 1], pts[n - 2])];
+  for (let i = 1; i < P.length - 2; i++){
+    const m = Math.max(2, Math.ceil(Math.hypot(P[i + 1][0] - P[i][0], P[i + 1][1] - P[i][1])/0.05));
+    for (let k = 0; k < m; k++) out.push(crPoint(P[i - 1], P[i], P[i + 1], P[i + 2], k/m));
+  }
+  out.push(pts[n - 1].slice());
+  return out;
+}
+function resample(line, h){
+  // ühtlase sammuga h (cm) piki kaarepikkust
+  const out = [line[0].slice()]; let need = h, prev = line[0];
+  for (let i = 1; i < line.length; i++){
+    let cur = line[i], seg = Math.hypot(cur[0] - prev[0], cur[1] - prev[1]);
+    while (seg >= need){
+      const w = need/seg; prev = [prev[0] + (cur[0] - prev[0])*w, prev[1] + (cur[1] - prev[1])*w];
+      out.push(prev); seg -= need; need = h;
+    }
+    need -= seg; prev = cur;
+  }
+  const last = line[line.length - 1], q = out[out.length - 1];
+  if (Math.hypot(last[0] - q[0], last[1] - q[1]) > h*0.3) out.push(last.slice()); else out[out.length - 1] = last.slice();
+  return out;
+}
+const FIBER_SHAPES = {
+  straight: () => { const pts = []; for (let k = 0; k <= 6; k++) pts.push([-10 + 29*k/6, 0]); return pts; },   // 7 punkti, et saaks painutada
+  arc: () => { const r = 9, pts = [[-10, -9], [-6, -9], [-2, -9]];
+    for (let a = 15; a <= 90; a += 15) pts.push([-2 + r*Math.sin(a*DEG), -9 + r - r*Math.cos(a*DEG)]);
+    pts.push([7, 4], [7, 9]); return pts; },
+  s: () => { const pts = []; for (let k = 0; k <= 10; k++){ const u = k/10; pts.push([-10 + 29*u, -5*Math.cos(Math.PI*u)]); } return pts; },
+  loop: () => { const r = 4, pts = [[-10, -6], [-5, -6], [-1, -6]];
+    for (let a = 30; a <= 180; a += 30) pts.push([-1 + r*Math.sin(a*DEG), -6 + r - r*Math.cos(a*DEG)]);
+    pts.push([-5, 2], [-9, 2]); return pts; },
+};
+let fiberCache = {key:null, g:null};
+function fiberGeom(){
+  const F = st.fiber;
+  if (!F.pts) F.pts = FIBER_SHAPES[F.shape]();
+  const key = JSON.stringify([F.pts, F.w, F.clad, F.t]);
+  if (fiberCache.key === key) return fiberCache.g;
+  const c = resample(spline(F.pts), 0.12), N = c.length;
+  const tan = c.map((q, i) => { const a = c[Math.max(0, i - 1)], b = c[Math.min(N - 1, i + 1)], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [(b[0] - a[0])/l, (b[1] - a[1])/l]; });
+  const nrm = tan.map(t => [-t[1], t[0]]);
+  // väikseim kõverusraadius
+  let minR = Infinity;
+  for (let i = 2; i < N - 2; i++){
+    const a1 = Math.atan2(tan[i - 2][1], tan[i - 2][0]), a2 = Math.atan2(tan[i + 2][1], tan[i + 2][0]);
+    let da = a2 - a1; while (da > Math.PI) da -= 2*Math.PI; while (da < -Math.PI) da += 2*Math.PI;
+    const ds = 4*0.12; if (Math.abs(da) > 1e-9) minR = Math.min(minR, ds/Math.abs(da));
+  }
+  const band = (hw, wallTag, capTag) => {
+    const Lp = c.map((q, i) => [q[0] + nrm[i][0]*hw, q[1] + nrm[i][1]*hw]);
+    const Rp = c.map((q, i) => [q[0] - nrm[i][0]*hw, q[1] - nrm[i][1]*hw]);
+    const E = [];
+    E.push({a:Rp[0], b:Lp[0], tag:capTag + '0'});
+    for (let i = 0; i < N - 1; i++) E.push({a:Lp[i], b:Lp[i + 1], tag:wallTag, n0:nrm[i], n1:nrm[i + 1]});
+    E.push({a:Lp[N - 1], b:Rp[N - 1], tag:capTag + '1'});
+    for (let i = N - 1; i > 0; i--) E.push({a:Rp[i], b:Rp[i - 1], tag:wallTag, n0:[-nrm[i][0], -nrm[i][1]], n1:[-nrm[i - 1][0], -nrm[i - 1][1]]});
+    return {poly:[...Lp, ...Rp.slice().reverse()], E};
+  };
+  const core = band(F.w/2, 'wall', 'cap');
+  const polys = [core.poly], pmed = ['i'], edges = core.E.slice();
+  if (F.clad){ const cl = band(F.w/2 + F.t, 'clad', 'ccap'); polys.push(cl.poly); pmed.push('c'); edges.push(...cl.E); }
+  const g = {polys, pmed, edges, Hp:c[0], nOut:[-tan[0][0], -tan[0][1]], L:7, center:c, minR, len:(N - 1)*0.12};
+  fiberCache = {key, g};
+  return g;
 }
 function inPoly(pt, poly){
   let c = false;
@@ -198,44 +310,57 @@ function inPoly(pt, poly){
   }
   return c;
 }
-function mediumAt(pt, polys){ return polys.some(p => inPoly(pt, p)) ? 'i' : 'o'; }
+function mediumAt(pt, g){ for (let k = 0; k < g.polys.length; k++) if (inPoly(pt, g.polys[k])) return g.pmed[k]; return 'o'; }
 
 /* ---------- kiirte jälgimine ---------- */
 // Tagastab lõigud {a,b,I,depth,main} ja põhikiire sündmused {p, nrm, i, t (või null TIR), n1, n2, R}
 function trace(origin, dir, lam, opts){
   const g = sceneGeom(), M = st.med[st.scene];
   const segs = [], events = [];
-  const edges = [];
-  for (const poly of g.polys) for (let k = 0; k < poly.length; k++) edges.push([poly[k], poly[(k + 1) % poly.length]]);
+  const edges = g.edges;
+  const maxDepth = st.scene === 'fiber' ? 600 : 10;
   function step(o, d, I, depth, isMain){
-    if (depth > 10 || I < 0.02) return;
+    if (depth > maxDepth || I < 0.02 || segs.length > 4000) return;
     // lähim lõikepunkt
     let best = null;
-    for (const [a, b] of edges){
+    for (const E of edges){
+      const a = E.a, b = E.b;
       const ex = b[0] - a[0], ey = b[1] - a[1];
       const den = d[0]*ey - d[1]*ex; if (Math.abs(den) < 1e-12) continue;
       const t = ((a[0] - o[0])*ey - (a[1] - o[1])*ex) / den;
+      if (t <= 1e-7 || (best && t >= best.t)) continue;
       const u = ((a[0] - o[0])*d[1] - (a[1] - o[1])*d[0]) / den;
-      if (t > 1e-7 && u >= -1e-9 && u <= 1 + 1e-9 && (!best || t < best.t)){
-        const el = Math.hypot(ex, ey);
-        best = {t, nrm:[-ey/el, ex/el]};
-      }
+      if (u < -1e-9 || u > 1 + 1e-9) continue;
+      const el = Math.hypot(ex, ey);
+      best = {t, u, E, fn:[-ey/el, ex/el]};
     }
-    if (!best){ segs.push({a:o, b:[o[0] + d[0]*200, o[1] + d[1]*200], I, depth, main:isMain}); return; }
+    if (!best){ segs.push({a:o, b:[o[0] + d[0]*200, o[1] + d[1]*200], I, depth, main:isMain, inf:true}); return; }
     const p = [o[0] + d[0]*best.t, o[1] + d[1]*best.t];
     segs.push({a:o, b:p, I, depth, main:isMain});
-    let nrm = best.nrm;
-    if (nrm[0]*d[0] + nrm[1]*d[1] > 0) nrm = [-nrm[0], -nrm[1]];      // normaal vastu kiirt
+    let fn = best.fn;                                                    // tahu (lõigu) normaal
+    if (fn[0]*d[0] + fn[1]*d[1] > 0) fn = [-fn[0], -fn[1]];
+    let nrm = fn;
+    if (best.E.n0){                                                      // kõvera pinna sujuv normaal
+      const u = Math.max(0, Math.min(1, best.u)), n0 = best.E.n0, n1 = best.E.n1;
+      let nx = n0[0]*(1 - u) + n1[0]*u, ny = n0[1]*(1 - u) + n1[1]*u; const l = Math.hypot(nx, ny);
+      nrm = [nx/l, ny/l]; if (nrm[0]*d[0] + nrm[1]*d[1] > 0) nrm = [-nrm[0], -nrm[1]];
+    }
     const eps = 1e-5;
-    const m1 = M[mediumAt([p[0] - d[0]*eps, p[1] - d[1]*eps], g.polys)];
-    const m2 = M[mediumAt([p[0] + d[0]*eps, p[1] + d[1]*eps], g.polys)];
+    const k1 = mediumAt([p[0] - d[0]*eps, p[1] - d[1]*eps], g), k2 = mediumAt([p[0] + d[0]*eps, p[1] + d[1]*eps], g);
+    const m1 = M[k1], m2 = M[k2];
     const n1 = nAt(m1, lam), n2 = nAt(m2, lam);
     const ci = -(nrm[0]*d[0] + nrm[1]*d[1]);
+    if (best.E.tag === 'clad' && k1 === 'c'){                            // katte välispinnal neelab kaitsekest valguse
+      if (isMain) events.push({p, nrm, i:Math.acos(Math.min(1, ci)), t:null, absorbed:true, tag:'clad', dir:d});
+      return;
+    }
     const eta = n1/n2, k = 1 - eta*eta*(1 - ci*ci);
-    const r = [d[0] + 2*ci*nrm[0], d[1] + 2*ci*nrm[1]];
+    let r = [d[0] + 2*ci*nrm[0], d[1] + 2*ci*nrm[1]];
+    if (r[0]*fn[0] + r[1]*fn[1] <= 1e-9){ const c2 = -(fn[0]*d[0] + fn[1]*d[1]); r = [d[0] + 2*c2*fn[0], d[1] + 2*c2*fn[1]]; }
     const iAng = Math.acos(Math.min(1, ci));
+    const tag = best.E.tag;
     if (k < 0){
-      if (isMain) events.push({p, nrm, i:iAng, t:null, n1, n2, R:1, dir:d, out:r});
+      if (isMain) events.push({p, nrm, i:iAng, t:null, n1, n2, R:1, dir:d, out:r, tag, from:k1, to:k2});
       step(p, r, I, depth + 1, isMain);
       return;
     }
@@ -243,7 +368,7 @@ function trace(origin, dir, lam, opts){
     const tdir = [eta*d[0] + (eta*ci - ct)*nrm[0], eta*d[1] + (eta*ci - ct)*nrm[1]];
     const rs = (n1*ci - n2*ct)/(n1*ci + n2*ct), rp = (n2*ci - n1*ct)/(n2*ci + n1*ct);
     const R = (rs*rs + rp*rp)/2;
-    if (isMain) events.push({p, nrm, i:iAng, t:Math.acos(Math.min(1, ct)), n1, n2, R, dir:d, out:tdir});
+    if (isMain) events.push({p, nrm, i:iAng, t:Math.acos(Math.min(1, ct)), n1, n2, R, dir:d, out:tdir, tag, from:k1, to:k2});
     step(p, tdir, I*(1 - R), depth + 1, isMain);
     if (opts.refl) step(p, r, I*R, depth + 1, false);
   }
@@ -296,7 +421,7 @@ function arc(p, v1, v2, rcm, color, text){
   // nurk vektorite v1 ja v2 vahel (maailma koordinaadid), kaar raadiusega rcm
   const a1 = Math.atan2(-v1[1], v1[0]), a2 = Math.atan2(-v2[1], v2[0]);   // ekraani teljed
   let d = a2 - a1; while (d > Math.PI) d -= 2*Math.PI; while (d < -Math.PI) d += 2*Math.PI;
-  const cx = X(p[0]), cy = Y(p[1]), r = rcm*st.S;
+  const cx = X(p[0]), cy = Y(p[1]), r = Math.max(rcm*st.S, rcm*15);   // väikesel mõõtkaval (telefon) ei lähe kaar liiga väikeseks
   ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 1.6;
   ctx.beginPath(); ctx.arc(cx, cy, r, a1, a1 + d, d < 0); ctx.stroke(); ctx.restore();
   const am = a1 + d/2;
@@ -317,10 +442,12 @@ function drawMedia(g){
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
   const shade = n => `rgba(56,132,196,${Math.min(0.42, 0.06 + (n - 1)*0.28).toFixed(3)})`;
   if (M.o.n > 1.001){ ctx.fillStyle = shade(M.o.n); ctx.fillRect(0, 0, W, H); }
-  for (const poly of g.polys){
-    ctx.fillStyle = '#fff'; ctx.beginPath(); poly.forEach((q, k) => k ? ctx.lineTo(X(q[0]), Y(q[1])) : ctx.moveTo(X(q[0]), Y(q[1]))); ctx.closePath(); ctx.fill();
-    if (M.i.n > 1.001){ ctx.fillStyle = shade(M.i.n); ctx.fill(); }
-    ctx.strokeStyle = '#1e3a5f'; ctx.lineWidth = 1.8; ctx.stroke();
+  for (let k = g.polys.length - 1; k >= 0; k--){          // väline (kate) enne, südamik peale
+    const poly = g.polys[k], m = M[g.pmed[k]];
+    ctx.fillStyle = '#fff'; ctx.beginPath(); poly.forEach((q, j) => j ? ctx.lineTo(X(q[0]), Y(q[1])) : ctx.moveTo(X(q[0]), Y(q[1]))); ctx.closePath(); ctx.fill();
+    if (m.n > 1.001){ ctx.fillStyle = g.pmed[k] === 'c' ? `rgba(234,179,8,${Math.min(0.35, 0.05 + (m.n - 1)*0.25).toFixed(3)})` : shade(m.n); ctx.fill(); }
+    if (g.pmed[k] === 'c'){ ctx.strokeStyle = '#334155'; ctx.lineWidth = 4; } else { ctx.strokeStyle = '#1e3a5f'; ctx.lineWidth = st.scene === 'fiber' ? 1.4 : 1.8; }
+    ctx.stroke();
   }
   // keskkondade sildid
   const nm = m => `${matOf(m.mat).id === 'custom' ? 'n' : matOf(m.mat).name}  n = ${comma(m.n.toFixed(3))}`;
@@ -329,6 +456,10 @@ function drawMedia(g){
     ctx.fillText(nm(M.o), 14, 14); ctx.textBaseline = 'bottom'; ctx.fillText(nm(M.i), 14, H - 14);
   } else if (st.scene === 'plate'){
     ctx.fillText(nm(M.o), 14, 14); ctx.textBaseline = 'middle'; ctx.fillText(nm(M.i), 14, Y(0));
+  } else if (st.scene === 'fiber'){
+    ctx.fillText('väljas: ' + nm(M.o), 14, 14);
+    ctx.fillText('valgusjuht: ' + nm(M.i), 14, 32);
+    if (st.fiber.clad) ctx.fillText('kate: n = ' + comma(M.c.n.toFixed(3)), 14, 50);
   } else {
     ctx.fillText(nm(M.o), 14, 14); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(nm(M.i), X(0), Y(-3.5));
   }
@@ -357,7 +488,7 @@ function draw(){
   const res = trace(S, dir, null, {refl: st.refl && !st.white});
   // normaalid ja nurgad
   const inView = ev => { const x = X(ev.p[0]), y = Y(ev.p[1]); return x > -5 && x < W + 5 && y > -5 && y < H + 5; };
-  const visEv = res.events.filter(inView);
+  const visEv = res.events.filter(inView).slice(0, st.scene === 'fiber' ? 2 : 99);
   if (st.angles){
     visEv.forEach((ev, k) => {
       const L = 3.2;
@@ -397,11 +528,29 @@ function draw(){
       }
     });
   }
+  if (st.scene === 'fiber') drawFiberUI(g);
   drawSource(S, dir);
   // täieliku sisepeegelduse märge
-  const tir = res.events.find(ev => ev.t === null);
-  if (tir) label(X(tir.p[0]) + 70, Y(tir.p[1]) + 22, 'täielik sisepeegeldus', '#b45309', 13);
+  const tir = res.events.find(ev => ev.t === null && !ev.absorbed);
+  if (tir && st.scene !== 'fiber') label(X(tir.p[0]) + 70, Y(tir.p[1]) + 22, 'täielik sisepeegeldus', '#b45309', 13);
   readout(res, g);
+}
+
+function drawFiberUI(g){
+  // sisenemisots (punane rõngas) ja juhtpunktid
+  const c0 = g.center[0];
+  ctx.save(); ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 2; ctx.setLineDash([3, 3]);
+  ctx.beginPath(); ctx.arc(X(c0[0]), Y(c0[1]), Math.max(10, st.fiber.w*st.S*0.7), 0, 2*Math.PI); ctx.stroke(); ctx.restore();
+  if (!st.drawMode){
+    st.fiber.pts.forEach((q, i) => {
+      ctx.save(); ctx.beginPath(); ctx.arc(X(q[0]), Y(q[1]), fHover === i || fDrag === i ? 8 : 5, 0, 2*Math.PI);
+      ctx.fillStyle = fHover === i || fDrag === i ? 'rgba(37,99,235,.9)' : 'rgba(37,99,235,.6)'; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
+    });
+  }
+  if (stroke && stroke.length > 1){
+    ctx.save(); ctx.strokeStyle = '#2563eb'; ctx.lineWidth = Math.max(3, st.fiber.w*st.S); ctx.globalAlpha = 0.35; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath(); stroke.forEach((q, i) => i ? ctx.lineTo(X(q[0]), Y(q[1])) : ctx.moveTo(X(q[0]), Y(q[1]))); ctx.stroke(); ctx.restore();
+  }
 }
 
 /* ---------- näidud ---------- */
@@ -442,21 +591,26 @@ function readout(res, g){
     } else if (e1){
       h += `<div class="warn"><b>Täielik sisepeegeldus</b> juba plaadi pinnal (n₁ &gt; n₂).</div>`;
     }
-  } else {
-    const phi = st.phi;
-    const e1 = ev[0], e2 = ev[1];
-    const nr = nI/nO;
+  } else if (st.scene === 'prism'){
+    const phi = st.phi, nr = nI/nO;
+    const NAME = {left:'vasak tahk', right:'parem tahk', base:'alus'};
     h += `<div>Murdev nurk <b>φ = ${fmt(phi, 0)}°</b>, suhteline murdumisnäitaja n₂/n₁ = ${fmt(nr, 3)}</div>`;
-    if (e1 && e1.t !== null){
-      h += `<table><tr><td>1. tahk</td><td>α₁ = ${fmt(e1.i/DEG)}°</td><td>β₁ = ${fmt(e1.t/DEG)}°</td></tr>`;
-      if (e2 && e2.t !== null){
-        h += `<tr><td>2. tahk</td><td>α₂ = ${fmt(e2.i/DEG)}°</td><td>β₂ = ${fmt(e2.t/DEG)}°</td></tr></table>`;
-        const dev = e1.i/DEG + e2.t/DEG - phi;
-        h += `<div>Kõrvalekaldenurk <b>δ = ${fmt(dev)}°</b></div><div class="small">δ = α₁ + β₂ − φ; kontroll: β₁ + α₂ = ${fmt((e1.t + e2.i)/DEG)}° = φ</div>`;
-      } else if (e2){
-        h += `<tr><td>2. tahk</td><td>α₂ = ${fmt(e2.i/DEG)}°</td><td>–</td></tr></table>`;
-        h += `<div class="warn">Teisel tahul toimub <b>täielik sisepeegeldus</b> (α₂ on suurem kui piirnurk ${fmt(Math.asin(Math.min(1, 1/nr))/DEG)}°).</div>`;
-      } else h += '</table>';
+    h += `<div class="small">${a > 0 ? 'Kiir langeb ristsirge aluse poolt (α > 0).' : (a < 0 ? 'Kiir langeb ristsirge tipu poolt (α < 0).' : 'Kiir langeb piki ristsirget.')}</div>`;
+    h += `<table>`;
+    ev.slice(0, 6).forEach((e, k) => {
+      h += `<tr><td>${k + 1}. ${NAME[e.tag] || ''}</td><td>α${'₁₂₃₄₅₆'[k]} = ${fmt(e.i/DEG)}°</td><td>${e.t !== null ? 'β' + '₁₂₃₄₅₆'[k] + ' = ' + fmt(e.t/DEG) + '°' : '<span class="warn">täielik sisepeegeldus</span>'}</td></tr>`;
+    });
+    h += `</table>`;
+    const last = res.segs.filter(q => q.main).pop();
+    if (last && last.inf && ev.length >= 2){
+      const d0 = ev[0].dir, d1 = [last.b[0] - last.a[0], last.b[1] - last.a[1]], l1 = Math.hypot(d1[0], d1[1]);
+      const dev = Math.acos(Math.max(-1, Math.min(1, (d0[0]*d1[0] + d0[1]*d1[1])/l1)))/DEG;
+      const outFace = NAME[ev[ev.length - 1].tag];
+      h += `<div>Kiir väljub: <b>${outFace}</b>. Kõrvalekaldenurk <b>δ = ${fmt(dev)}°</b></div>`;
+      const e1 = ev[0], e2 = ev[1];
+      if (ev.length === 2 && e1.tag === 'left' && e2.tag === 'right' && e2.t !== null && a >= 0)
+        h += `<div class="small">δ = α₁ + β₂ − φ = ${fmt(e1.i/DEG)}° + ${fmt(e2.t/DEG)}° − ${fmt(phi, 0)}° = ${fmt(e1.i/DEG + e2.t/DEG - phi)}°; kontroll: β₁ + α₂ = ${fmt((e1.t + e2.i)/DEG)}° = φ</div>`;
+      else h += `<div class="small">δ on nurk langeva ja prismast väljuva kiire vahel.</div>`;
     }
     const sMin = nr*Math.sin(phi*DEG/2);
     if (sMin <= 1){
@@ -465,6 +619,8 @@ function readout(res, g){
     } else {
       h += `<div class="small" style="margin-top:4px">Selle prisma korral väljub kiir teiselt tahult ainult väga väikese murdva nurga või väiksema murdumisnäitaja korral.</div>`;
     }
+  } else {
+    h += fiberReadout(res, g, M);
   }
   if (st.white){
     const r = trace(sourceRay().S, sourceRay().dir, 700, {refl:false}), v = trace(sourceRay().S, sourceRay().dir, 400, {refl:false});
@@ -481,6 +637,47 @@ function readout(res, g){
   $('readout').innerHTML = h;
 }
 
+function fiberReadout(res, g, M){
+  const ev = res.events, F = st.fiber;
+  const nCore = M.i.n, nOut = F.clad ? M.c.n : M.o.n, n0 = M.o.n;
+  let h = '';
+  const e0 = ev[0];
+  if (e0 && e0.tag === 'cap0'){
+    h += `<div>Otspinnal: α = <b>${fmt(Math.abs(st.alpha))}°</b>${e0.t !== null ? `, murdumisnurk β = <b>${fmt(e0.t/DEG)}°</b>` : ''}</div>`;
+  }
+  if (nOut < nCore){
+    const ap = Math.asin(nOut/nCore)/DEG;
+    h += `<div>Piirnurk külgpinnal <b>α<sub>p</sub> = ${fmt(ap)}°</b> <span class="small">(sin α<sub>p</sub> = ${fmt(nOut, 3)}/${fmt(nCore, 3)})</span></div>`;
+    const NA = Math.sqrt(nCore*nCore - nOut*nOut)/n0;
+    h += NA >= 1
+      ? `<div class="small">Sirges valgusjuhis jääb sisse iga nurga all otspinnale langev kiir (√(n² − n<sub>väljas</sub>²)/n₀ = ${fmt(NA, 2)} ≥ 1).</div>`
+      : `<div class="small">Sirge valgusjuhi vastuvõtunurk <b>θ<sub>max</sub> = ${fmt(Math.asin(NA)/DEG)}°</b> (n₀·sin θ<sub>max</sub> = √(n<sub>südamik</sub>² − n<sub>kate</sub>²) = ${fmt(NA*n0, 3)}). Suurema nurga all sisenev kiir lekib külgpinnast välja.</div>`;
+  } else h += `<div class="warn">Valgusjuhi ümbrus on optiliselt sama tihe või tihedam kui valgusjuht – täielikku sisepeegeldust ei toimu.</div>`;
+  const walls = ev.filter(e => e.tag === 'wall');
+  const tirs = walls.filter(e => e.t === null).length;
+  const w1 = walls[0];
+  if (w1) h += `<div style="margin-top:4px">Esimene põrge külgpinnale: langemisnurk <b>${fmt(w1.i/DEG)}°</b> → ${w1.t === null ? 'täielik sisepeegeldus' : 'osa valgusest väljub'}</div>`;
+  const last = res.segs.filter(q => q.main).pop(), lastEv = ev[ev.length - 1];
+  let out = '';
+  if (lastEv && lastEv.absorbed){
+    const bad = walls.find(e => e.t !== null);
+    out = `<span class="warn"><b>Valgus lekib südamikust välja</b></span>${bad ? ` – kiir langeb südamiku ja katte piirile ${fmt(bad.i/DEG)}° nurga all, mis on väiksem kui piirnurk.` : '.'} Katte välispinnal neelab selle kaitsekest. Täielikke sisepeegeldusi enne seda: ${tirs}.`;
+  }
+  else if (!last || !last.inf) out = 'Kiir jääb valgusjuhi sisse (liiga palju peegeldusi, et lõpuni jälgida).';
+  else if (lastEv && lastEv.tag === 'cap1') out = `<b>Valgus jõuab teise otsa</b> ja väljub sealt. Täielikke sisepeegeldusi teel: ${tirs}.`;
+  else if (lastEv && lastEv.tag === 'cap0') out = 'Kiir pöördub tagasi ja väljub sisenemisotsast.';
+  else if (lastEv && (lastEv.tag === 'wall' || lastEv.tag === 'clad' || lastEv.tag === 'ccap0' || lastEv.tag === 'ccap1')){
+    const bad = walls.find(e => e.t !== null);
+    out = `<span class="warn"><b>Valgus lekib külgpinnast välja</b></span>${bad ? ` – seal langeb kiir külgpinnale ${fmt(bad.i/DEG)}° nurga all, mis on väiksem kui piirnurk.` : '.'} Täielikke sisepeegeldusi enne seda: ${tirs}.`;
+  } else if (lastEv && lastEv.tag === 'cap0' && ev.length === 1) out = '';
+  if (ev.length === 1 && e0 && e0.t === null) out = 'Kiir ei sisene valgusjuhti.';
+  h += `<div style="margin-top:4px">${out}</div>`;
+  if (F.clad) h += `<div class="small">Kattega valgusjuhis (nagu päris valguskaablis) toimub täielik sisepeegeldus südamiku ja katte piiril. Katte ümber on kaitsekest (paks tume joon), mis neelab kattesse lekkinud valguse.</div>`;
+  if (g.minR < F.w/2 + (F.clad ? F.t : 0)) h += `<div class="warn" style="margin-top:4px">Painutus on liiga järsk: väikseim painderaadius ${fmt(g.minR, 1)} cm on väiksem kui pool valgusjuhi laiusest, kuju on vigane. Tee kurv laiemaks.</div>`;
+  else h += `<div class="small" style="margin-top:4px">${g.minR > 500 ? 'Sirge valgusjuht' : 'Väikseim painderaadius ' + fmt(g.minR, 1) + ' cm'}, pikkus ${fmt(g.len, 0)} cm.</div>`;
+  return h;
+}
+
 /* ---------- juhtelemendid ---------- */
 function fillMatSelect(sel){
   sel.innerHTML = MATS.map(m => `<option value="${m.id}">${m.name}${m.n ? ' (' + comma(m.n.toFixed(3)) + ')' : ''}</option>`).join('');
@@ -491,17 +688,40 @@ function syncUI(){
   $('matO').value = M.o.mat; $('matI').value = M.i.mat;
   $('nO').value = M.o.n; $('nI').value = M.i.n;
   $('nO').disabled = M.o.mat !== 'custom'; $('nI').disabled = M.i.mat !== 'custom';
-  const L = {iface:['Ülemine keskkond', 'Alumine keskkond'], plate:['Ümbritsev keskkond', 'Plaadi materjal'], prism:['Ümbritsev keskkond', 'Prisma materjal']}[st.scene];
+  const L = {iface:['Ülemine keskkond', 'Alumine keskkond'], plate:['Ümbritsev keskkond', 'Plaadi materjal'], prism:['Ümbritsev keskkond', 'Prisma materjal'], fiber:['Ümbritsev keskkond', 'Valgusjuhi materjal (südamik)']}[st.scene];
   $('lblO').textContent = L[0]; $('lblI').textContent = L[1];
   $('rowD').style.display = st.scene === 'plate' ? 'flex' : 'none';
   $('rowPhi').style.display = st.scene === 'prism' ? 'flex' : 'none';
   $('rowCrit').style.display = st.scene === 'iface' ? 'flex' : 'none';
   $('rowSide').style.display = st.scene === 'iface' ? 'block' : 'none';
+  $('rowFiber').style.display = st.scene === 'fiber' ? 'block' : 'none';
+  $('rowClad').style.display = st.scene === 'fiber' ? 'block' : 'none';
+  $('rowCladN').style.display = st.fiber.clad ? 'flex' : 'none';
+  $('optClad').checked = st.fiber.clad; $('nC').value = st.med.fiber.c.n; $('cladT').value = st.fiber.t; $('fiberW').value = st.fiber.w;
+  document.querySelectorAll('#fiberShapes button').forEach(b => b.classList.toggle('on', b.dataset.f === st.fiber.shape));
+  $('btnDraw').classList.toggle('on', st.drawMode);
+  if (!SIGNED() && st.alpha < 0) st.alpha = -st.alpha;
+  $('alpha').min = $('alphaN').min = SIGNED() ? -89.9 : 0;
+  $('signNote').textContent = st.scene === 'prism' ? 'Negatiivne α: kiir langeb ristsirge teiselt poolt (prisma tipu poolt).' : (st.scene === 'fiber' ? 'Negatiivne α: kiir langeb ristsirge teiselt poolt.' : '');
+  $('signNote').style.display = SIGNED() ? 'block' : 'none';
   syncSide();
   $('alpha').value = st.alpha; $('alphaN').value = +st.alpha.toFixed(1);
   document.querySelectorAll('#scenes button').forEach(b => b.classList.toggle('on', b.dataset.s === st.scene));
 }
-document.querySelectorAll('#scenes button').forEach(b => b.onclick = () => { st.scene = b.dataset.s; syncUI(); draw(); });
+document.querySelectorAll('#scenes button').forEach(b => b.onclick = () => { st.scene = b.dataset.s; st.drawMode = false; fitScale(); syncUI(); setHint(); draw(); });
+document.querySelectorAll('#fiberShapes button').forEach(b => b.onclick = () => { st.fiber.shape = b.dataset.f; st.fiber.pts = FIBER_SHAPES[b.dataset.f](); st.drawMode = false; syncUI(); setHint(); draw(); });
+$('btnDraw').onclick = () => { st.drawMode = !st.drawMode; syncUI(); setHint(); draw(); };
+$('optClad').onchange = e => { st.fiber.clad = e.target.checked; syncUI(); draw(); };
+$('nC').oninput = e => { const v = parseFloat(String(e.target.value).replace(',', '.')); if (v >= 1 && v <= 4){ st.med.fiber.c.n = v; draw(); } };
+$('cladT').oninput = e => { const v = parseFloat(String(e.target.value).replace(',', '.')); if (v >= 0.2 && v <= 2){ st.fiber.t = v; draw(); } };
+$('fiberW').oninput = e => { const v = parseFloat(String(e.target.value).replace(',', '.')); if (v >= 0.6 && v <= 5){ st.fiber.w = v; draw(); } };
+function setHint(){
+  const h = $('hint'); h.style.opacity = '1';
+  h.textContent = st.scene === 'fiber'
+    ? (st.drawMode ? (TOUCH ? 'Joonista sõrmega valgusjuht – valgus siseneb joone algusest' : 'Joonista hiirega valgusjuht – valgus siseneb joone algusest')
+                   : 'Lohista valgusallikat (nurk) või siniseid punkte (painutamine)')
+    : 'Lohista valgusallikat, et muuta langemisnurka';
+}
 function syncSide(){
   document.querySelectorAll('#sideBtns button').forEach(b => b.classList.toggle('on', (b.dataset.side === 'bottom') === st.below));
 }
@@ -519,7 +739,7 @@ function onMat(key, sel, inp){
 }
 onMat('o', $('matO'), $('nO')); onMat('i', $('matI'), $('nI'));
 $('alpha').oninput = e => { st.alpha = +e.target.value; $('alphaN').value = +st.alpha.toFixed(1); draw(); };
-$('alphaN').oninput = e => { const v = parseFloat(String(e.target.value).replace(',', '.')); if (v >= 0 && v < 90){ st.alpha = v; $('alpha').value = v; draw(); } };
+$('alphaN').oninput = e => { const v = parseFloat(String(e.target.value).replace(',', '.')); if (v >= (SIGNED() ? -89.9 : 0) && v < 90){ st.alpha = v; $('alpha').value = v; draw(); } };
 $('plateD').oninput = e => { const v = parseFloat(String(e.target.value).replace(',', '.')); if (v >= 0.5 && v <= 12){ st.d = v; draw(); } };
 $('phi').oninput = e => { const v = parseFloat(String(e.target.value).replace(',', '.')); if (v >= 10 && v <= 100){ st.phi = v; draw(); } };
 $('optAngles').onchange = e => { st.angles = e.target.checked; draw(); };
@@ -527,40 +747,89 @@ $('optRefl').onchange = e => { st.refl = e.target.checked; draw(); };
 $('optCrit').onchange = e => { st.crit = e.target.checked; draw(); };
 $('optWhite').onchange = e => { st.white = e.target.checked; draw(); };
 
-/* ---------- lohistamine: langemisnurk ---------- */
-let dragging = false;
+/* ---------- lohistamine: langemisnurk, valgusjuhi painutamine ja joonistamine ---------- */
+let dragging = false, fDrag = null, fHover = null, stroke = null;
+function evCm(e){ const r = cv.getBoundingClientRect(); return [toX(e.clientX - r.left), toY(e.clientY - r.top)]; }
 function setAlphaFrom(e){
-  const r = cv.getBoundingClientRect();
-  const x = toX(e.clientX - r.left), y = toY(e.clientY - r.top);
+  const [x, y] = evCm(e);
   if (st.scene === 'iface') st.below = y < 0;              // allika saab lohistada üle piiri
   const g = sceneGeom();
   const thN = Math.atan2(g.nOut[1], g.nOut[0]);
   let d = Math.atan2(y - g.Hp[1], x - g.Hp[0]) - thN;
   while (d > Math.PI) d -= 2*Math.PI; while (d < -Math.PI) d += 2*Math.PI;
-  if (st.scene === 'iface') d = Math.abs(d);              // allikas jääb ristsirgest vasakule
-  st.alpha = Math.max(0, Math.min(89.9, Math.round(d/DEG*2)/2));
+  if (!SIGNED()) d = Math.abs(d);                           // kahe keskkonna piir ja plaat: allikas jääb ristsirgest vasakule
+  const lo = SIGNED() ? -89.9 : 0;
+  st.alpha = Math.max(lo, Math.min(89.9, Math.round(d/DEG*2)/2));
   syncSide();
   $('alpha').value = st.alpha; $('alphaN').value = st.alpha;
   draw();
 }
-cv.addEventListener('pointerdown', e => { dragging = true; cv.setPointerCapture(e.pointerId); setAlphaFrom(e); });
-cv.addEventListener('pointermove', e => { if (dragging) setAlphaFrom(e); });
-cv.addEventListener('pointerup', () => dragging = false);
-cv.addEventListener('pointercancel', () => dragging = false);
+function hitHandle(q){
+  if (st.scene !== 'fiber' || st.drawMode) return null;
+  const rad = (TOUCH ? 20 : 10)/st.S;
+  let best = null, bd = Infinity;
+  st.fiber.pts.forEach((p, i) => { const d = Math.hypot(p[0] - q[0], p[1] - q[1]); if (d < rad && d < bd){ bd = d; best = i; } });
+  return best;
+}
+function finishStroke(){
+  const pts = stroke; stroke = null;
+  if (!pts || pts.length < 2){ draw(); return; }
+  let line = resample(pts, 0.3);
+  let len = (line.length - 1)*0.3;
+  if (len < 6){ $('hint').textContent = 'Joon on liiga lühike – joonista vähemalt 6 cm pikkune valgusjuht'; draw(); return; }
+  // silumine (libisev keskmine), otspunktid jäävad paigale
+  for (let pass = 0; pass < 4; pass++){
+    line = line.map((q, i) => { if (i === 0 || i === line.length - 1) return q;
+      const a = line[Math.max(0, i - 2)], b = line[i - 1], c = line[i + 1], d = line[Math.min(line.length - 1, i + 2)];
+      return [(a[0] + b[0] + q[0] + c[0] + d[0])/5, (a[1] + b[1] + q[1] + c[1] + d[1])/5]; });
+  }
+  // juhtpunktid umbes iga 3 cm järel
+  const ctrl = resample(line, 3);
+  st.fiber.pts = ctrl; st.fiber.shape = 'free'; st.drawMode = false;
+  syncUI(); setHint(); draw();
+}
+cv.addEventListener('pointerdown', e => {
+  cv.setPointerCapture(e.pointerId);
+  if (!st.drawMode) $('hint').style.opacity = '0';          // vihje kaob esimese puudutusega (muidu katab silte)
+  const q = evCm(e);
+  if (st.scene === 'fiber' && st.drawMode){ stroke = [q]; $('hint').style.opacity = '0'; draw(); return; }
+  const h = hitHandle(q);
+  if (h !== null){ fDrag = h; draw(); return; }
+  dragging = true; setAlphaFrom(e);
+});
+cv.addEventListener('pointermove', e => {
+  const q = evCm(e);
+  if (stroke){ const l = stroke[stroke.length - 1]; if (Math.hypot(q[0] - l[0], q[1] - l[1]) > 0.15){ stroke.push(q); draw(); } return; }
+  if (fDrag !== null){
+    const xm = W/2/st.S - 0.5, ym = H/2/st.S - 0.5;
+    st.fiber.pts[fDrag] = [Math.max(-xm, Math.min(xm, q[0])), Math.max(-ym, Math.min(ym, q[1]))];
+    st.fiber.shape = 'free'; syncUI(); draw(); return;
+  }
+  if (dragging){ setAlphaFrom(e); return; }
+  const h = hitHandle(q);
+  if (h !== fHover){ fHover = h; cv.style.cursor = h !== null ? 'grab' : 'default'; draw(); }
+});
+const endPtr = () => { dragging = false; if (fDrag !== null){ fDrag = null; draw(); } if (stroke) finishStroke(); };
+cv.addEventListener('pointerup', endPtr);
+cv.addEventListener('pointercancel', endPtr);
 
+function fitScale(){
+  // valgusjuhi stseen mahub ekraanile (u 44 × 28 cm), teised nagu varem
+  st.S = st.scene === 'fiber' ? Math.max(6, Math.min(W/44, H/28)) : Math.max(8, Math.min(30, Math.min(W, H) / 30));
+}
 function resize(){
   const r = main.getBoundingClientRect();
   W = Math.max(200, Math.floor(r.width)); H = Math.max(200, Math.floor(r.height));
   DPR = window.devicePixelRatio || 1;
   cv.width = Math.round(W*DPR); cv.height = Math.round(H*DPR);
   cv.style.width = W + 'px'; cv.style.height = H + 'px';
-  st.S = Math.max(8, Math.min(30, Math.min(W, H) / 30));     // telefonis väiksem mõõtkava
+  fitScale();     // telefonis väiksem mõõtkava
   draw();
 }
 new ResizeObserver(resize).observe(main);
 if (/github\.io$/.test(location.hostname)) $('back').style.display = 'block';
 syncUI(); resize();
-window.__rf = {st, trace, sourceRay, sceneGeom, nAt, draw, syncUI};
+window.__rf = {st, trace, sourceRay, sceneGeom, nAt, draw, syncUI, fitScale, FIBER_SHAPES, X, Y};
 </script>
 </body>
 </html>
