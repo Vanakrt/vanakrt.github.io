@@ -47,6 +47,15 @@
     input[type=number],select,button{font-size:16px}
     #hint{font-size:12px;top:6px;padding:4px 8px;max-width:94%}
   }
+  /* videojuhendid (näha ainult github.io-s) */
+  #vids{display:none;margin:-2px 0 12px;font-size:13px;color:#4b5563}
+  #vids button{font-size:13px;padding:4px 10px;margin:2px 4px 2px 0}
+  #vmodal{position:fixed;inset:0;z-index:1000;background:rgba(15,23,42,.82);display:none;align-items:center;justify-content:center;padding:16px}
+  #vmodal.on{display:flex}
+  #vmodal .vbox{width:min(1100px,100%)}
+  #vmodal .vtop{display:flex;justify-content:space-between;align-items:center;color:#fff;font-size:14px;margin-bottom:8px;gap:12px}
+  #vmodal .vtop button{flex-shrink:0;white-space:nowrap;background:#fff;color:#1f2937;border:0;border-radius:6px;padding:6px 12px;font-size:14px;cursor:pointer}
+  #vmodal video{display:block;width:100%;max-height:82vh;background:#000;border-radius:10px}
 </style>
 </head>
 <body>
@@ -54,6 +63,7 @@
   <aside>
     <div id="back"><a href="../">← Kõik simulatsioonid</a></div>
     <h1>Põrked – impulsi ja energia jäävus</h1>
+    <div id="vids">Videojuhend: <button type="button" data-v="opetajale">▶ õpetajale</button><button type="button" data-v="opilasele">▶ õpilasele</button></div>
     <div class="row">
       <button class="primary" id="btnRun">▶ Käivita</button>
       <button id="btnReset">↺ Algusesse</button>
@@ -388,6 +398,31 @@ new ResizeObserver(resize).observe(main);
 if (/github\.io$/.test(location.hostname)) $('back').style.display = 'block';
 setType('elastic'); resize(); requestAnimationFrame(loop);
 window.__pc = {p, sim, collide, explode, reset, stepSim, draw, setType};
+</script>
+<div id="vmodal" role="dialog" aria-modal="true" aria-label="Videojuhend">
+  <div class="vbox">
+    <div class="vtop"><span id="vtitle"></span><button type="button" id="vclose">✕ Sulge</button></div>
+    <video controls playsinline preload="none"></video>
+  </div>
+</div>
+<script>
+/* Videojuhendid: failid on kaustas video/; nupud on näha ainult github.io-s (artefaktis videofaile pole) */
+(() => {
+  if (!/github\.io$/.test(location.hostname) && !/[?&]video\b/.test(location.search)) return;
+  const row = document.getElementById('vids'), m = document.getElementById('vmodal'), v = m.querySelector('video');
+  const names = {opetajale: 'Video õpetajale: kuidas simulatsiooni kasutada', opilasele: 'Video õpilasele: füüsika selgitus'};
+  row.style.display = 'block';
+  const close = () => { v.pause(); m.classList.remove('on'); };
+  row.querySelectorAll('button').forEach(b => b.onclick = () => {
+    const k = b.dataset.v;
+    document.getElementById('vtitle').textContent = names[k];
+    v.poster = 'video/' + k + '.jpg'; v.src = 'video/' + k + '.mp4';
+    m.classList.add('on'); v.play().catch(() => {});
+  });
+  document.getElementById('vclose').onclick = close;
+  m.addEventListener('click', e => { if (e.target === m) close(); });
+  addEventListener('keydown', e => { if (e.key === 'Escape' && m.classList.contains('on')) close(); });
+})();
 </script>
 </body>
 </html>
