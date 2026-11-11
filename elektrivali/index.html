@@ -1057,11 +1057,20 @@ window.__fe = {fieldOne, fieldAt, potOne, potAt, placedPx, toPx, preset, items: 
     document.getElementById('vtitle').textContent = names[k];
     v.poster = 'video/' + k + '.jpg'; v.src = 'video/' + k + '.mp4';
     m.classList.add('on'); v.play().catch(() => {});
+    if (window.goatcounter && window.goatcounter.count) window.goatcounter.count({path: 'video-elektrivali-' + k, title: 'Video (elektrivali): ' + k, event: true});
   });
   document.getElementById('vclose').onclick = close;
   m.addEventListener('click', e => { if (e.target === m) close(); });
   addEventListener('keydown', e => { if (e.key === 'Escape' && m.classList.contains('on')) close(); });
 })();
+</script>
+<script>
+/* Külastuste statistika: GoatCounter (küpsisteta, isikuandmeid ei salvestata), ainult github.io-s; tulemused: vanakrt.goatcounter.com */
+if (/github\.io$/.test(location.hostname)) {
+  const gc = document.createElement('script');
+  gc.async = true; gc.dataset.goatcounter = 'https://vanakrt.goatcounter.com/count'; gc.src = 'https://gc.zgo.at/count.js';
+  document.head.appendChild(gc);
+}
 </script>
 </body>
 </html>

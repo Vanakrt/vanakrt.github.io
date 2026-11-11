@@ -18,3 +18,7 @@ Iga simulatsioon on üks iseseisev `index.html` ilma väliste sõltuvusteta. Uue
 ## Videojuhendid
 
 Iga simulatsiooni kaustas on `video/opetajale.mp4` (kuidas kasutada) ja `video/opilasele.mp4` (füüsika selgitus) koos eelvaatepildiga (`.jpg`). Simulatsiooni paneelil avab nupp „Videojuhend“ video lehe peal; nupud on näha ainult github.io-s (artefaktis videofaile pole). Avalehel on kõigi videote tabel. Hääl: Neurokõne (TartuNLP), hääl Mari.
+
+## Külastuste statistika
+
+Kõigil lehtedel on GoatCounter (küpsisteta, isikuandmeid ei salvestata, GDPR-teavitust pole vaja). Loendur laaditakse ainult github.io-s, seega artefaktides ja kohalikus testis seda pole. Lisaks lehtede avamistele loetakse videovaatamisi sündmustena (`video-<kaust>-opetajale` / `video-<kaust>-opilasele`). Statistika: https://vanakrt.goatcounter.com (nõuab sisselogimist).
