@@ -5,6 +5,7 @@ Interaktiivsed õppevahendid füüsikatundideks: https://vanakrt.github.io/
 | Simulatsioon | Kaust | Aadress |
 | --- | --- | --- |
 | Elektrivälja jõujooned | `elektrivali/` | https://vanakrt.github.io/elektrivali/ |
+| Magnetväli ja jõujooned | `magnetvali/` | https://vanakrt.github.io/magnetvali/ |
 | Peeglid ja läätsed | `optika/` | https://vanakrt.github.io/optika/ |
 | Valguse murdumine | `murdumine/` | https://vanakrt.github.io/murdumine/ |
 | Lainete interferents | `interferents/` | https://vanakrt.github.io/interferents/ |
