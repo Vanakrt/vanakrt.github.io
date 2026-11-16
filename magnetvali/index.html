@@ -61,7 +61,9 @@
     <h2>Olukord</h2>
     <div class="types" id="scenes">
       <button data-s="magnet">Pulkmagnet</button>
+      <button data-s="mag2">Kaks magnetit</button>
       <button data-s="wire">Sirge juhe</button>
+      <button data-s="wires2">Kaks juhet</button>
       <button data-s="ring">Ringjuhe</button>
       <button data-s="sol">Solenoid</button>
       <button data-s="force" style="grid-column:1/3">Vooluga juhe magnetväljas</button>
@@ -71,6 +73,17 @@
     <div class="set" id="setMagnet">
       <div class="row"><button id="btnFlipM">⇄ Pööra magnet ümber</button></div>
       <div class="small">Magneti mõõtmed 10 × 2 × 1 cm, ferriitmagnet (magneetumus M = 3·10⁵ A/m).</div>
+    </div>
+    <div class="set" id="setMag2">
+      <div class="seg" id="segM2"><button data-v="ns">N–S tõmbuvad</button><button data-v="nn">N–N tõukuvad</button><button data-v="ss">S–S tõukuvad</button></div>
+      <div class="row"><label>Vahe magnetite vahel <input type="range" id="rGap" min="1" max="10" step="0.5"></label><span id="vGap"></span></div>
+      <div class="small">Mõlemad magnetid 10 × 2 × 1 cm, ferriitmagnetid (M = 3·10⁵ A/m).</div>
+    </div>
+    <div class="set" id="setWires2">
+      <div class="row"><label>Vool I₁ <input type="range" id="rI1" min="1" max="20" step="1"></label><span id="vI1"></span></div>
+      <div class="row"><label>Vool I₂ <input type="range" id="rI2" min="1" max="20" step="1"></label><span id="vI2"></span></div>
+      <div class="row"><label>Kaugus d <input type="range" id="rDw" min="2" max="12" step="0.5"></label><span id="vDw"></span></div>
+      <div class="seg two" id="segD2"><button data-v="1">voolud samas suunas</button><button data-v="-1">voolud vastassuunas</button></div>
     </div>
     <div class="set" id="setWire">
       <div class="row"><label>Voolutugevus I <input type="range" id="rIw" min="1" max="20" step="1"></label><span id="vIw"></span></div>
@@ -124,6 +137,8 @@
       • <b>Mõõtmine:</b> hiirega pinna kohal liikudes (telefonis puudutades „Pööra vaadet“ režiimis) näitab sinine nool välja suunda ja paneel magnetinduktsiooni B väärtust.<br>
       • Jõujooned väljuvad magneti põhjapoolusest (N) ja sisenevad lõunapoolusesse (S); magneti sees lähevad nad S-st N-i, nii et jõujooned on kinnised.<br>
       • <b>Parema käe reegel (kruvireegel):</b> kui parem käsi haarab juhtmest nii, et pöial näitab voolu suunda, näitavad kõverdatud sõrmed jõujoonte suunda. Ringjuhtme ja solenoidi korral: kui sõrmed näitavad voolu suunda keerdudes, näitab pöial põhjapooluse (N) suunda.<br>
+      • <b>Kaks magnetit:</b> erinimelised poolused (N–S) tõmbuvad, samanimelised (N–N, S–S) tõukuvad. Tõukumisel tekib magnetite vahele punkt, kus väli on null (kompass seal ei pöördu kindlas suunas). Jõud arvutatakse ühe magneti pinnavoolule mõjuvate Ampère'i jõudude summana; magnetite magneetumust loetakse muutumatuks.<br>
+      • <b>Kaks paralleelset juhet:</b> samas suunas vooluga juhtmed tõmbuvad, vastassuunas vooluga juhtmed tõukuvad. Jõud juhtme pikkusühiku kohta F/L = μ₀I₁I₂/(2πd).<br>
       • <b>Vasaku käe reegel:</b> kui jõujooned sisenevad vasaku käe peopessa ja neli sõrme näitavad voolu suunda, siis väljasirutatud pöial näitab juhtmele mõjuva jõu suunda. Jõu suurus F = B·I·L.<br>
       • Voolu suund on kokkuleppeline (plussist miinusesse). Nooled juhtmel näitavad voolu suunda.<br>
       • <b>Mudel:</b> väli arvutatakse Biot'–Savart'i seadusest. Pulkmagnet = ühtlaselt magneeditud risttahukas (samaväärne pinnavooluga). Solenoidi väli arvutatakse N ringvoolu summana (keerdude tõus jäetakse arvestamata). Ringjuhtme ja solenoidi juhtmeotste välja ei arvestata. Juhe magnetväljas: magnetpooluste vahel on väli homogeenne, väljaspool loetakse see nulliks.
@@ -147,6 +162,7 @@ const fmt = (v, d = 2) => isFinite(v) ? minus(comma((Math.abs(v) < 0.5*Math.pow(
 const sig3 = v => { if (!isFinite(v)) return '–'; if (v === 0) return '0'; const d = Math.max(0, 2 - Math.floor(Math.log10(Math.abs(v)))); return fmt(v, Math.min(d, 6)); };
 function fmtB(T){
   const a = Math.abs(T);
+  if (a < 1e-12) return '0';
   if (a >= 1) return fmt(a, 2) + ' T';
   if (a >= 1e-3) return sig3(a*1e3) + ' mT';
   return sig3(a*1e6) + ' µT';
@@ -191,10 +207,10 @@ function ringB(cx, cy, cz, R, I, px, py, pz, out){
 }
 // Ühtlaselt magneeditud risttahukas (pikkus L piki x, laius w piki z, kõrgus h piki y), magneetumus M (A/m) piki x.
 // Samaväärne pinnavooluga K = M: N ristkülikukujulist voolukontuuri, igaühes vool I = M·L/N.
-function magnetB(L, w, h, M, N, px, py, pz, out){
+function magnetB(L, w, h, M, N, px, py, pz, out, cx = 0){
   const I = M*(L/100)/N, hy = h/2, hz = w/2;
   for (let i = 0; i < N; i++){
-    const x = -L/2 + (i + 0.5)*L/N;
+    const x = cx - L/2 + (i + 0.5)*L/N;
     segB(x, hy, -hz, x, hy, hz, I, px, py, pz, out);
     segB(x, hy, hz, x, -hy, hz, I, px, py, pz, out);
     segB(x, -hy, hz, x, -hy, -hz, I, px, py, pz, out);
@@ -216,16 +232,38 @@ function wireZB(x0, y0, I, px, py, out){
   out[0] -= f*ry; out[1] += f*rx;
 }
 
+// Jõud magnetile T (pinnavool) magneti S väljas: F = Σ I·(dl × B), N
+function magnetForce(T, S){
+  const L = MAG.L, N = MAG.N, hy = MAG.h/2, hz = MAG.w/2, m = 6, I = T.M*(L/100)/N;
+  const C = [[hy, -hz], [hy, hz], [-hy, hz], [-hy, -hz]], F = [0, 0, 0], b = [0, 0, 0];
+  for (let i = 0; i < N; i++){
+    const x = T.cx - L/2 + (i + 0.5)*L/N;
+    for (let k = 0; k < 4; k++){
+      const [y0, z0] = C[k], [y1, z1] = C[(k + 1) % 4];
+      const dly = (y1 - y0)/m/100, dlz = (z1 - z0)/m/100;
+      for (let j = 0; j < m; j++){
+        const t = (j + 0.5)/m;
+        b[0] = b[1] = b[2] = 0;
+        magnetB(L, MAG.w, MAG.h, S.M, N, x, y0 + (y1 - y0)*t, z0 + (z1 - z0)*t, b, S.cx);
+        F[0] += I*(dly*b[2] - dlz*b[1]); F[1] += I*(dlz*b[0]); F[2] += I*(-dly*b[0]);
+      }
+    }
+  }
+  return F;
+}
+
 /* ---------- olukorrad ---------- */
 const MAG = {L:10, w:2, h:1, M:3e5, N:80};
 const RING = {R:4, tube:0.15};
 const SOL = {R:2, l:10, tube:0.12};
 const FRC = {a:5, d:2.5, g:2.5, t:1.5, half:6, ell:10, m:0.005, Lf:0.05, gamma:1.6};
-const p = {scene:'magnet', flipM:false, Iw:5, dW:1, Ir:5, dR:1, Is:2, dS:1, Ns:15, Bf:0.05, If:3, dF:1, flipF:false, on:true, fview:'sum',
+const p = {scene:'magnet', flipM:false, m2:'ns', gap:4, I1:10, I2:10, d2:1, dw:6, Iw:5, dW:1, Ir:5, dR:1, Is:2, dS:1, Ns:15, Bf:0.05, If:3, dF:1, flipF:false, on:true, fview:'sum',
            l3:false, dens:1, arrows:true, xray:true, tool:'rotate', auto:false};
 const VIEWS = {
   magnet:{yaw:-32, pitch:38, size:29, t:[0, 0, 0]},
+  mag2:  {yaw:-22, pitch:42, size:40, t:[0, 0, 0]},
   wire:  {yaw:-30, pitch:32, size:24, t:[0, 0, 0]},
+  wires2:{yaw:-28, pitch:36, size:26, t:[0, 0, 0]},
   ring:  {yaw:-55, pitch:24, size:24, t:[0, 0, 0]},
   sol:   {yaw:-32, pitch:30, size:26, t:[0, 0, 0]},
   force: {yaw:-28, pitch:16, size:24, t:[0, 2, 0]}
@@ -233,13 +271,17 @@ const VIEWS = {
 // tööpind, millele kompassid asetatakse ja kus „ühel pinnal“ jõujooned on: y = 0 (laud) või z = 0 (püstine)
 const PLANE = {
   magnet:{ax:1, u:[-14, 14], v:[-9, 9]},
+  mag2:  {ax:1, u:[-22, 22], v:[-10, 10]},
   wire:  {ax:1, u:[-10, 10], v:[-10, 10]},
+  wires2:{ax:1, u:[-12, 12], v:[-10, 10]},
   ring:  {ax:1, u:[-11, 11], v:[-9, 9]},
   sol:   {ax:1, u:[-14, 14], v:[-8, 8]},
   force: {ax:2, u:[-9, 9], v:[-5.5, 10.5]}
 };
 const START_COMPASS = {
   magnet:[[-8, 0], [8, 0], [0, 4], [0, -4], [-5.5, 4], [5.5, -4]],
+  mag2:  [[0, 0], [0, 4], [0, -4], [-18, 0], [18, 0], [-7, 4], [7, -4]],
+  wires2:[[0, 0], [0, 4], [0, -4], [-8, 0], [8, 0], [-3, 3], [3, -3]],
   wire:  [[4, 0], [2.83, 2.83], [0, 4], [-2.83, 2.83], [-4, 0], [-2.83, -2.83], [0, -4], [2.83, -2.83]],
   ring:  [[0, 0], [8.5, 0], [-8.5, 0], [0, 6.5], [0, -6.5]],
   sol:   [[0, 0], [9, 0], [-9, 0], [0, 4], [0, -4]],
@@ -247,6 +289,16 @@ const START_COMPASS = {
 };
 const compasses = {};
 for (const k in START_COMPASS) compasses[k] = START_COMPASS[k].map(([u, v]) => planePt(k, u, v));
+// kaks magnetit: keskpunktid ja magneetumused (A vasakul, B paremal; N–S: A põhjapoolus vastu B lõunapoolust)
+function mag2Cfg(){
+  const c = p.gap/2 + MAG.L/2, M = MAG.M;
+  if (p.m2 === 'ns') return [{cx:-c, M}, {cx:c, M}];
+  if (p.m2 === 'nn') return [{cx:-c, M}, {cx:c, M:-M}];
+  return [{cx:-c, M:-M}, {cx:c, M}];
+}
+// kas punkt on mõne magneti sees (cx: magnetite keskpunktid)
+function magCenters(){ return p.scene === 'magnet' ? [0] : p.scene === 'mag2' ? mag2Cfg().map(m => m.cx) : []; }
+function boxDist(cx, x, y, z){ return Math.hypot(Math.max(0, Math.abs(x - cx) - MAG.L/2), Math.max(0, Math.abs(y) - MAG.h/2), Math.max(0, Math.abs(z) - MAG.w/2)); }
 function planePt(sc, u, v){ return PLANE[sc].ax === 1 ? [u, 0, v] : [u, v, 0]; }
 
 // rippuva juhtme olek (juhe magnetväljas)
@@ -270,7 +322,9 @@ function fieldAt(x, y, z, out, disp){
   out[0] = out[1] = out[2] = 0;
   switch (p.scene){
     case 'magnet': magnetB(MAG.L, MAG.w, MAG.h, p.flipM ? -MAG.M : MAG.M, MAG.N, x, y, z, out); break;
+    case 'mag2': for (const m of mag2Cfg()) magnetB(MAG.L, MAG.w, MAG.h, m.M, disp ? 60 : MAG.N, x, y, z, out, m.cx); break;
     case 'wire': wireYB(0, 0, p.Iw*p.dW, x, z, out); break;
+    case 'wires2': wireYB(-p.dw/2, 0, p.I1, x, z, out); wireYB(p.dw/2, 0, p.I2*p.d2, x, z, out); break;
     case 'ring': ringB(0, 0, 0, RING.R, p.Ir*p.dR, x, y, z, out); break;
     case 'sol': {
       const N = p.Ns, I = p.Is*p.dS;
@@ -296,7 +350,9 @@ function blocked(sc, P){
   const [x, y, z] = P;
   switch (sc){
     case 'magnet': return Math.abs(x) < MAG.L/2 + 0.45 && Math.abs(z) < MAG.w/2 + 0.45 && Math.abs(y) < MAG.h/2 + 0.45;
+    case 'mag2': return mag2Cfg().some(m => Math.abs(x - m.cx) < MAG.L/2 + 0.45 && Math.abs(z) < MAG.w/2 + 0.45 && Math.abs(y) < MAG.h/2 + 0.45);
     case 'wire': return Math.hypot(x, z) < 0.75;
+    case 'wires2': return Math.hypot(x + p.dw/2, z) < 0.75 || Math.hypot(x - p.dw/2, z) < 0.75;
     case 'ring': return Math.hypot(Math.hypot(y, z) - RING.R, x) < 0.75;
     case 'sol': return Math.abs(x) < SOL.l/2 + 0.5 && Math.abs(Math.hypot(y, z) - SOL.R) < 0.6;
     case 'force': {
@@ -313,7 +369,9 @@ function blocked(sc, P){
 function srcDist(x, y, z){
   switch (p.scene){
     case 'magnet': { const dx = Math.max(0, Math.abs(x) - MAG.L/2), dy = Math.max(0, Math.abs(y) - MAG.h/2), dz = Math.max(0, Math.abs(z) - MAG.w/2); return Math.hypot(dx, dy, dz); }
+    case 'mag2': return Math.min(...mag2Cfg().map(m => boxDist(m.cx, x, y, z)));
     case 'wire': return Math.hypot(x, z);
+    case 'wires2': return Math.min(Math.hypot(x + p.dw/2, z), Math.hypot(x - p.dw/2, z));
     case 'ring': return Math.hypot(Math.hypot(y, z) - RING.R, x);
     case 'sol': return Math.hypot(Math.max(0, Math.abs(x) - SOL.l/2), Math.hypot(y, z) - SOL.R);
     case 'force': { const [xw, yw] = wirePos(); return Math.hypot(x - xw, y - yw); }
@@ -389,6 +447,53 @@ function computeLines(){
       }
       break;
     }
+    case 'mag2': {
+      const cfg = mag2Cfg(), angs = p.l3 ? [0, 45, 90, 135] : [0], n = p.l3 ? [3, 4, 5][d] : [5, 8, 12][d];
+      let hitA = false;
+      const inA = (x, y, z) => Math.abs(x - cfg[0].cx) < MAG.L/2 && Math.abs(y) < MAG.h/2 && Math.abs(z) < MAG.w/2;
+      const stopB = (x, y, z) => (hitA = hitA || inA(x, y, z));
+      for (let mi = 0; mi < 2; mi++) for (const a of angs){
+        const c = Math.cos(a*DEG), sn = Math.sin(a*DEG);
+        const ext = Math.min(Math.abs(c) > 1e-9 ? MAG.w/2/Math.abs(c) : 1e9, Math.abs(sn) > 1e-9 ? MAG.h/2/Math.abs(sn) : 1e9)*0.98;
+        for (const t of seedsAcross(n, ext)){
+          hitA = false;
+          const L = traceLine([cfg[mi].cx, t*sn, t*c], mi ? stopB : null, false);
+          if (hitA) continue;        // see joon läbib ka magnetit A – see on juba joonistatud
+          if (L.pts.length > 6) out.push(addArrows(L));
+        }
+      }
+      magF = magnetForce(cfg[1], cfg[0]);
+      break;
+    }
+    case 'wires2': {
+      // tasandiline väli: jõujooned on funktsiooni ψ = Σ ±I·ln r samaväärtusjooned; võrdse sammuga ψ annab jõujoonte tiheduse ∝ B
+      const x1 = -p.dw/2, x2 = p.dw/2, s2 = p.d2;
+      const psi = x => p.I1*Math.log(Math.abs(x - x1)) + s2*p.I2*Math.log(Math.abs(x - x2));
+      const step = (p.I1 + p.I2)/2*[0.6, 0.42, 0.3][d];
+      const ys = p.l3 ? [-6, 0, 6] : [0];
+      const seeds = [];
+      let prev = null;
+      for (let x = -16; x <= 16.0001; x += 0.02){
+        const ok = Math.abs(x - x1) > 0.35 && Math.abs(x - x2) > 0.35;
+        if (!ok){ prev = null; continue; }
+        const v = psi(x)/step - 0.5;
+        if (prev && Math.floor(prev[1]) !== Math.floor(v)){
+          const k = Math.max(Math.floor(prev[1]), Math.floor(v));
+          seeds.push(prev[0] + (x - prev[0])*(k - prev[1])/(v - prev[1]));
+        }
+        prev = [x, v];
+      }
+      for (const y of ys){
+        const done = [];
+        for (const sx of seeds){
+          if (done.some(L => { for (let i = 0; i < L.length; i += 3) if (Math.abs(L[i] - sx) < 0.12 && Math.abs(L[i + 2]) < 0.12) return true; return false; })) continue;
+          const L = traceLine([sx, y, 0], null, false);
+          done.push(L.pts);
+          if (L.pts.length > 6) out.push(addArrows(L));
+        }
+      }
+      break;
+    }
     case 'wire': {
       const rs = [[1.2, 2.6, 4.5, 7.2], [1, 2, 3.2, 4.8, 7, 10], [0.8, 1.5, 2.3, 3.2, 4.3, 5.6, 7.2, 9.2]][d];
       const ys = p.l3 ? [-6, -3, 0, 3, 6] : [0];
@@ -442,7 +547,7 @@ function computeLines(){
   lines = out;
   lastWireX = wirePos()[0];
 }
-let lastWireX = 0;
+let lastWireX = 0, magF = [0, 0, 0];
 
 /* ---------- 3D kaamera ---------- */
 const cam = {yaw:0, pitch:0, size:26, t:[0, 0, 0], pos:[0, 0, 0], f:[0, 0, -1], r:[1, 0, 0], u:[0, 1, 0], F:1, dist:100};
@@ -567,6 +672,27 @@ function sceneObjects(){
     const nPos = p.flipM ? -1 : 1, L = MAG.L, hw = MAG.w/2, hh = MAG.h/2;
     addBox(0, L/2, -hh, hh, -hw, hw, nPos > 0 ? COL.N : COL.S, 0.5, nPos > 0 ? 'N' : 'S');
     addBox(-L/2, 0, -hh, hh, -hw, hw, nPos > 0 ? COL.S : COL.N, 0.5, nPos > 0 ? 'S' : 'N');
+  } else if (sc === 'mag2'){
+    const L = MAG.L, hw = MAG.w/2, hh = MAG.h/2, cfg = mag2Cfg();
+    for (const m of cfg){
+      const s = Math.sign(m.M);
+      addBox(m.cx, m.cx + L/2, -hh, hh, -hw, hw, s > 0 ? COL.N : COL.S, 0.5, s > 0 ? 'N' : 'S');
+      addBox(m.cx - L/2, m.cx, -hh, hh, -hw, hw, s > 0 ? COL.S : COL.N, 0.5, s > 0 ? 'S' : 'N');
+    }
+    const fx = Math.sign(magF[0]);
+    if (fx) for (const [m, sg] of [[cfg[1], 1], [cfg[0], -1]]) add3DArrow([m.cx - sg*fx*1.75, 0, -hw - 1.6], [sg*fx*3.5, 0, 0], COL.F, 'F', 3);
+  } else if (sc === 'wires2'){
+    const xs = [-p.dw/2, p.dw/2], dirs = [1, p.d2];
+    xs.forEach((x0, i) => {
+      const P = []; for (let y = -11; y <= 11.001; y += 0.5) P.push([x0, y, 0]);
+      addTube(P, 0.32, COL.cu, false);
+      for (const y of [-7, -2.5, 2.5, 7]) addArrowHead(x0, y, 0, 0, dirs[i], 0, 0.7, COL.cur, 0.6);
+      const q = proj(x0, 11.9*dirs[i], 0); prims.push({k:'txt', d:q[2] - 1, x:q[0], y:q[1], s:i ? 'I₂' : 'I₁', c:COL.cur, size:16, halo:true});
+    });
+    // jõud: samas suunas → tõmbuvad, vastassuunas → tõukuvad
+    const att = p.d2 > 0 ? 1 : -1;
+    add3DArrow([xs[0], 5, 0], [att*Math.min(2.2, p.dw*0.33), 0, 0], COL.F, 'F', 3);
+    add3DArrow([xs[1], 5, 0], [-att*Math.min(2.2, p.dw*0.33), 0, 0], COL.F, 'F', 3);
   } else if (sc === 'wire'){
     const P = []; for (let y = -11; y <= 11.001; y += 0.5) P.push([0, y, 0]);
     addTube(P, 0.32, COL.cu, false);
@@ -629,7 +755,11 @@ function poleLabels(off){      // solenoidi / ringi otsad: kust jõujooned välj
   let q = proj(off*s, 0, 0); prims.push({k:'txt', d:q[2] - 2, x:q[0], y:q[1], s:'N', c:COL.N, size:clamp(0.9*q[3], 12, 26), halo:true});
   q = proj(-off*s, 0, 0); prims.push({k:'txt', d:q[2] - 2, x:q[0], y:q[1], s:'S', c:COL.S, size:clamp(0.9*q[3], 12, 26), halo:true});
 }
-function insideMagnet(x, y, z){ return p.scene === 'magnet' && Math.abs(x) < MAG.L/2 && Math.abs(y) < MAG.h/2 && Math.abs(z) < MAG.w/2; }
+function insideMagnet(x, y, z){
+  if (Math.abs(y) >= MAG.h/2 || Math.abs(z) >= MAG.w/2) return false;
+  for (const cx of magCenters()) if (Math.abs(x - cx) < MAG.L/2) return true;
+  return false;
+}
 const xray = [], xrayArrows = [];
 function linePrims(){
   xray.length = 0; xrayArrows.length = 0;
@@ -803,6 +933,26 @@ function readout(){
       h += `Magneti keskel B = ${fmtB(Math.hypot(...b))} (sees suunatud S-st N-i).<br>Põhjapoolusest 0,5 cm kaugusel B = ${fmtB(Math.hypot(...bp))}.<br>Võrdluseks: Maa magnetväli Eestis on umbes 50 µT.`;
       break;
     }
+    case 'mag2': {
+      fieldAt(0, 0, 0, b, false);
+      const F = magF[0], att = p.m2 === 'ns';
+      const bm = [0, 0, 0]; magnetB(MAG.L, MAG.w, MAG.h, MAG.M, MAG.N, MAG.L/2 + p.gap, 0, 0, bm);
+      h += `Magnetid <b>${att ? 'tõmbuvad' : 'tõukuvad'}</b>: ${att ? 'erinimelised' : 'samanimelised'} poolused on vastamisi.<br>
+        Jõud kummalegi magnetile F = <b>${sig3(Math.abs(F))} N</b> (Newtoni III seaduse järgi vastassuunalised).<br>
+        Väli magnetite vahe keskel B = ${fmtB(Math.hypot(...b))}${att ? '' : ' – samanimeliste pooluste vahel väljad nõrgendavad teineteist, keskel on nullpunkt'}.`;
+      break;
+    }
+    case 'wires2': {
+      const FL = MU0*p.I1*p.I2/(2*Math.PI*p.dw/100);
+      const b1 = [0, 0, 0]; wireYB(-p.dw/2, 0, p.I1, p.dw/2, 0, b1);
+      fieldAt(0, 0, 0, b, false);
+      h += `Juhtmed <b>${p.d2 > 0 ? 'tõmbuvad' : 'tõukuvad'}</b> (voolud ${p.d2 > 0 ? 'samas suunas' : 'vastassuunas'}).<br>
+        Juhtme 1 väli juhtme 2 kohal: B₁ = μ₀I₁/(2πd) = ${fmtB(Math.hypot(...b1))}.<br>
+        Jõud pikkusühiku kohta F/L = B₁I₂ = μ₀I₁I₂/(2πd) = <b>${sig3(FL*1000)} mN/m</b>; 20 cm pikkusele lõigule ${sig3(FL*0.2*1000)} mN.<br>
+        Väli juhtmete vahel keskel B = ${fmtB(Math.hypot(...b))}${p.d2 > 0 && p.I1 === p.I2 ? ' (võrdsete samasuunaliste voolude korral null)' : ''}.<br>
+        <span class="small">Võrdluseks: 1 A vooluga juhtmed 1 m kaugusel mõjutavad teineteist jõuga 2·10⁻⁷ N iga meetri kohta (ampri vana definitsioon).</span>`;
+      break;
+    }
     case 'wire':
       h += `Väli on juhtme ümber ringikujuline: jõujooned on kontsentrilised ringjooned, mille keskpunkt on juhtmel.<br>B = μ₀I/(2πr): 1 cm kaugusel ${fmtB(MU0*p.Iw/(2*Math.PI*0.01))}, 4 cm kaugusel ${fmtB(MU0*p.Iw/(2*Math.PI*0.04))}.`;
       break;
@@ -842,12 +992,16 @@ function readout(){
 /* ---------- juhtelemendid ---------- */
 let dirty = true;
 function syncSeg(id, v){ document.querySelectorAll('#' + id + ' button').forEach(b => b.classList.toggle('on', b.dataset.v === String(v))); }
-function refresh(){ computeLines(); dirty = true; }
+function refresh(){
+  computeLines();
+  if (p.scene === 'mag2' || p.scene === 'wires2') compasses[p.scene] = compasses[p.scene].filter(C => !blocked(p.scene, C));   // magnet/juhe liikus kompassi peale
+  dirty = true;
+}
 function setScene(s){
   p.scene = s; probe = null;
   document.querySelectorAll('#scenes button').forEach(b => b.classList.toggle('on', b.dataset.s === s));
-  for (const [id, sc] of [['setMagnet', 'magnet'], ['setWire', 'wire'], ['setRing', 'ring'], ['setSol', 'sol'], ['setForce', 'force']]) $(id).classList.toggle('on', sc === s);
-  $('rowXray').style.display = s === 'magnet' ? 'flex' : 'none';
+  for (const [id, sc] of [['setMagnet', 'magnet'], ['setMag2', 'mag2'], ['setWires2', 'wires2'], ['setWire', 'wire'], ['setRing', 'ring'], ['setSol', 'sol'], ['setForce', 'force']]) $(id).classList.toggle('on', sc === s);
+  $('rowXray').style.display = s === 'magnet' || s === 'mag2' ? 'flex' : 'none';
   if (s === 'force'){ sw.th = 0; sw.om = 0; }
   setView('3d'); refresh();
 }
@@ -859,12 +1013,13 @@ function bindRange(id, key, fmtv){
 }
 bindRange('Iw', 'Iw', v => fmt(v, 0) + ' A'); bindRange('Ir', 'Ir', v => fmt(v, 0) + ' A');
 bindRange('Is', 'Is', v => fmt(v, 1) + ' A'); bindRange('Ns', 'Ns', v => String(v));
+bindRange('Gap', 'gap', v => fmt(v, 1) + ' cm'); bindRange('I1', 'I1', v => fmt(v, 0) + ' A'); bindRange('I2', 'I2', v => fmt(v, 0) + ' A'); bindRange('Dw', 'dw', v => fmt(v, 1) + ' cm');
 bindRange('If', 'If', v => fmt(v, 1) + ' A'); bindRange('Bf', 'Bf', v => fmt(v, 2) + ' T');
 function bindSeg(id, key, conv){
   syncSeg(id, p[key] === true ? 1 : p[key] === false ? 0 : p[key]);
   document.querySelectorAll('#' + id + ' button').forEach(b => b.onclick = () => { p[key] = conv(b.dataset.v); syncSeg(id, b.dataset.v); refresh(); });
 }
-bindSeg('segDW', 'dW', Number); bindSeg('segDR', 'dR', Number); bindSeg('segDS', 'dS', Number); bindSeg('segDF', 'dF', Number);
+bindSeg('segDW', 'dW', Number); bindSeg('segD2', 'd2', Number); bindSeg('segM2', 'm2', String); bindSeg('segDR', 'dR', Number); bindSeg('segDS', 'dS', Number); bindSeg('segDF', 'dF', Number);
 bindSeg('segL3', 'l3', v => v === '1');
 syncSeg('segTool', p.tool);
 document.querySelectorAll('#segTool button').forEach(b => b.onclick = () => { p.tool = b.dataset.v; syncSeg('segTool', p.tool); cv.style.cursor = p.tool === 'rotate' ? 'grab' : 'crosshair'; });
@@ -984,7 +1139,7 @@ if (/github\.io$/.test(location.hostname)) $('back').style.display = 'block';
 if (TOUCH) $('hint').textContent = 'Lohista sõrmega, et vaadet pöörata · kahe sõrmega suumi';
 cv.style.cursor = 'grab';
 setScene('magnet'); resize(); requestAnimationFrame(loop);
-window.__mv = {p, cam, sw, fieldAt, computeLines, get lines(){ return lines; }, compasses, setScene, setView, draw, proj, planeHit, forceX, wireBoost, stepSwing, wirePos, blocked};
+window.__mv = {magnetForce, mag2Cfg, get magF(){ return magF; }, p, cam, sw, fieldAt, computeLines, get lines(){ return lines; }, compasses, setScene, setView, draw, proj, planeHit, forceX, wireBoost, stepSwing, wirePos, blocked};
 </script>
 <script>
 /* Külastuste statistika: GoatCounter (küpsisteta, isikuandmeid ei salvestata), ainult github.io-s; tulemused: vanakrt.goatcounter.com */
