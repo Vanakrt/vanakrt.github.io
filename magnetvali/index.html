@@ -172,7 +172,7 @@
     <h2>Kasutamine</h2>
     <div class="small">
       • <b>Vaate pööramine:</b> lohista hiirega või sõrmega joonisel. Suumimine: hiire ratas või kahe sõrmega.<br>
-      • <b>Kompass:</b> vali „Lisa kompass“ ja klõpsa helehallil pinnal. Kompassi saab lohistada. Kompassinõela punane ots (N) näitab magnetvälja suunda selles punktis. Maa magnetvälja ei arvestata.<br>
+      • <b>Kompass:</b> vali „Lisa kompass“ ja klõpsa helehallil pinnal. Kompassi saab lohistada. Kompassinõela sinine ots (põhjapoolus N) näitab magnetvälja suunda selles punktis. Värvid nagu eesti õpikutes: põhjapoolus sinine, lõunapoolus punane. Maa magnetvälja ei arvestata.<br>
       • <b>Mõõtmine:</b> hiirega pinna kohal liikudes (telefonis puudutades „Pööra vaadet“ režiimis) näitab sinine nool välja suunda ja paneel magnetinduktsiooni B väärtust.<br>
       • Jõujooned väljuvad magneti põhjapoolusest (N) ja sisenevad lõunapoolusesse (S); magneti sees lähevad nad S-st N-i, nii et jõujooned on kinnised.<br>
       • <b>Parema käe reegel (kruvireegel):</b> kui parem käsi haarab juhtmest nii, et pöial näitab voolu suunda, näitavad kõverdatud sõrmed jõujoonte suunda. Ringjuhtme ja solenoidi korral: kui sõrmed näitavad voolu suunda keerdudes, näitab pöial põhjapooluse (N) suunda.<br>
@@ -942,7 +942,8 @@ function shade(hex, n){
   const [r, g, b] = hexRgb(hex);
   return `rgb(${Math.round(r*k)},${Math.round(g*k)},${Math.round(b*k)})`;
 }
-const COL = {line:'#334155', N:'#dc2626', S:'#2563eb', cu:'#b87333', cur:'#ea580c', curArrow:'#facc15', F:'#16a34a', B:'#7c3aed', probe:'#0891b2', gray:'#9ca3af'};
+const COL = {line:'#334155', N:'#2563eb', S:'#dc2626',   // eesti õpikutes: põhjapoolus sinine, lõunapoolus punane
+             cu:'#b87333', cur:'#ea580c', curArrow:'#facc15', F:'#16a34a', B:'#7c3aed', probe:'#0891b2', gray:'#9ca3af'};
 let prims = [], dNear = 0, dFar = 1;
 function addBox(x0, x1, y0, y1, z0, z1, col, tile, labels){
   const faces = [
@@ -1230,8 +1231,9 @@ function compassPrims(){
     const L = rc*0.88;
     const tipN = proj(C[0] + u[0]*L, C[1] + u[1]*L, C[2] + u[2]*L), tipS = proj(C[0] - u[0]*L, C[1] - u[1]*L, C[2] - u[2]*L);
     const s1 = proj(C[0] + wv[0], C[1] + wv[1], C[2] + wv[2]), s2 = proj(C[0] - wv[0], C[1] - wv[1], C[2] - wv[2]);
-    prims.push({k:'poly', d:d - 0.01, pts:[tipS[0], tipS[1], s1[0], s1[1], s2[0], s2[1]], fill:'#e5e7eb', stroke:'#475569', lw:0.8});
-    prims.push({k:'poly', d:d - 0.02, pts:[tipN[0], tipN[1], s1[0], s1[1], s2[0], s2[1]], fill:col, stroke:col === COL.N ? '#7f1d1d' : '#94a3b8', lw:0.8});
+    // kompassinõel on samuti magnet: N-ots sinine, S-ots punane (väljata hall)
+    prims.push({k:'poly', d:d - 0.01, pts:[tipS[0], tipS[1], s1[0], s1[1], s2[0], s2[1]], fill:col === COL.N ? COL.S : '#e5e7eb', stroke:col === COL.N ? '#7f1d1d' : '#94a3b8', lw:0.8});
+    prims.push({k:'poly', d:d - 0.02, pts:[tipN[0], tipN[1], s1[0], s1[1], s2[0], s2[1]], fill:col, stroke:col === COL.N ? '#1e3a8a' : '#94a3b8', lw:0.8});
     prims.push({k:'dot', d:d - 0.03, x:c[0], y:c[1], r:clamp(0.07*c[3], 1.5, 3), c:'#1f2937'});
   }
 }
