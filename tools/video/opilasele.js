@@ -76,6 +76,23 @@ module.exports = {scenes:[
     await a.moveTo(1150, 670, 0.5, false);
     await a.wait(3);
   }},
+  {name:'Lorentz', speech:'s12', caption:'Lorentzi jõud F = |q|vB on risti kiirusega → osake liigub ringjoonel, r = mv/(|q|B).', run:async a => {
+    await a.click('#scenes button[data-s="charge"]');
+    await a.moveTo(1150, 670, 0.5, false);
+    await a.wait(2);
+  }},
+  {name:'spiraal', speech:'s13', caption:'Kui osake lendab välja suhtes viltu, liigub ta mööda spiraali.', tail:2, run:async a => {
+    await a.slider('#rCa', 60, 1.2);
+    await a.moveTo(1150, 670, 0.5, false);
+    await a.wait(3.5);
+  }},
+  {name:'mullikamber', speech:'s14', caption:'Energiakadu: raadius väheneb, rada keerdub sissepoole (mullikambri jälg).', tail:3, run:async a => {
+    await a.slider('#rCa', 90, 0.8);
+    await a.click('#segView button[data-v="top"]');
+    await a.slider('#rCl', 25, 1.0);
+    await a.moveTo(1150, 670, 0.5, false);
+    await a.wait(9.5);
+  }},
   {name:'lõpp', caption:'', min:3, run:async a => {
     await a.card('Kõik simulatsioonid', '', 'vanakrt.github.io');
     await a.wait(3);

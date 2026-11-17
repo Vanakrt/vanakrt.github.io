@@ -66,6 +66,21 @@ module.exports = {scenes:[
     await a.click('#segDF button[data-v="-1"]');
     await a.wait(2.5);
   }},
+  {name:'laetud osake', speech:'t11', caption:'Laetud osake: osake, kiirus, B ja lennusuuna nurk.', run:async a => {
+    await a.click('#scenes button[data-s="charge"]');
+    await a.wait(1.6);
+    await a.slider('#rCa', 60, 1.2);
+    await a.wait(1.2);
+    await a.click('#segPt button[data-v="e"]');
+    await a.wait(1.0);
+  }},
+  {name:'mullikamber', speech:'t12', caption:'Energiakadu: rada keerdub sissepoole nagu mullikambris.', tail:2.5, run:async a => {
+    await a.slider('#rCa', 90, 0.8);
+    await a.click('#segView button[data-v="top"]');
+    await a.slider('#rCl', 25, 1.0);
+    await a.moveTo(1150, 670, 0.5, false);
+    await a.wait(9.5);
+  }},
   {name:'lõpp', caption:'', min:3, run:async a => {
     await a.card('Kõik simulatsioonid', '', 'vanakrt.github.io');
     await a.wait(3);
