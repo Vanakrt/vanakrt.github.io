@@ -77,6 +77,7 @@
       <button data-s="ring">Ringjuhe</button>
       <button data-s="sol">Solenoid</button>
       <button data-s="force" style="grid-column:1/3">Vooluga juhe magnetväljas</button>
+      <button data-s="ringmag" style="grid-column:1/3">Juhe ringmagneti väljas</button>
       <button data-s="charge" style="grid-column:1/3">Laetud osake magnetväljas</button>
     </div>
 
@@ -113,6 +114,17 @@
       <div class="seg two" id="segDS"><button data-v="1">voolu suund 1</button><button data-v="-1">voolu suund 2</button></div>
       <div class="small">Solenoidi pikkus 10 cm, raadius 2 cm.</div>
     </div>
+    <div class="set" id="setRingmag">
+      <div class="seg two" id="segRo"><button data-v="h">juhe rõhtne</button><button data-v="v">juhe püstine</button></div>
+      <div class="row"><label>Voolutugevus I <input type="range" id="rRi" min="0.5" max="5" step="0.5"></label><span id="vRi"></span></div>
+      <div class="seg two" id="segRd"><button data-v="1">voolu suund 1</button><button data-v="-1">voolu suund 2</button></div>
+      <div class="row"><label>Juhtme kõrgus <input type="range" id="rRy"></label><span id="vRy"></span></div>
+      <div class="row" id="rowRa"><label>Juhtme suund (nurk) <input type="range" id="rRa" min="0" max="180" step="5"></label><span id="vRa"></span></div>
+      <div class="row"><label>Juhtme pikkus <input type="range" id="rRl" min="2" max="10" step="0.5"></label><span id="vRl"></span></div>
+      <div class="row"><button id="btnRflip">⇄ Pööra magnet</button><button id="btnRreset">Algasendisse</button></div>
+      <label class="chk"><input type="checkbox" id="optRloc" checked> näita jõudu juhtme eri osadele</label>
+      <div class="small">Ringmagnet: välisläbimõõt 6 cm, ava läbimõõt 2,4 cm, paksus 1 cm, ferriit (M = 3·10⁵ A/m), magneeditud piki telge. Juhet saab joonisel lohistada.</div>
+    </div>
     <div class="set" id="setCharge">
       <div class="seg" id="segPt"><button data-v="p">prooton</button><button data-v="e">elektron</button><button data-v="a">alfaosake</button></div>
       <div class="seg two" id="segCm"><button data-v="full">väli kõikjal</button><button data-v="enter">osake siseneb välja</button></div>
@@ -137,7 +149,7 @@
         <option value="mag">ainult magneti väli</option>
         <option value="wire">ainult juhtme väli</option>
       </select></label></div>
-      <div class="small">Juhe ripub kahe 10 cm pikkuse niidi otsas, mass 5 g; magnetväljas on 5 cm juhtmest.</div>
+      <div class="small">Juhe (pikkus 12 cm) ripub kahe 10 cm pikkuse niidi otsas, mass 5 g. Poolustahud 10 × 5 cm, pooluste vahe 5 cm; B on välja tugevus pooluste vahe keskel.</div>
     </div>
 
     <h2>Jõujooned</h2>
@@ -169,8 +181,9 @@
       • <b>Kaks paralleelset juhet:</b> samas suunas vooluga juhtmed tõmbuvad, vastassuunas vooluga juhtmed tõukuvad. Jõud juhtme pikkusühiku kohta F/L = μ₀I₁I₂/(2πd).<br>
       • <b>Vasaku käe reegel:</b> kui jõujooned sisenevad vasaku käe peopessa ja neli sõrme näitavad voolu suunda, siis väljasirutatud pöial näitab juhtmele mõjuva jõu suunda. Jõu suurus F = B·I·L.<br>
       • Voolu suund on kokkuleppeline (plussist miinusesse). Nooled juhtmel näitavad voolu suunda.<br>
+      • <b>Juhe ringmagneti väljas:</b> ringmagneti väli ei ole homogeenne – selle suund ja suurus muutuvad nii kõrguse kui ka kaugusega teljest, ning magneti avas on väli vastassuunaline. Seepärast mõjub juhtme eri osadele erinev jõud (helerohelised nooled); kogujõud on nende summa F = I∫dl × B. Kui juhtmele mõjub jõumoment magneti telje suhtes, hakkaks vabalt pöörlev juhe telje ümber pöörlema (nagu lihtsas elektrimootoris). Ringmagnet = kaks silindrilist pinnavoolu (välis- ja sisepinnal vastassuunas). Juhtme enda ja toitejuhtmete välja ega neile mõjuvat jõudu ei arvestata.<br>
       • <b>Laetud osake magnetväljas:</b> liikuvale laengule mõjub Lorentzi jõud F = |q|·v·B·sin α, mis on risti nii kiiruse kui ka väljaga. Jõud muudab ainult kiiruse suunda, mitte suurust. Kui v ⟂ B, liigub osake ringjoonel raadiusega r = mv/(|q|B); muidu mööda spiraali. Suund: vasaku käe reegel (positiivse laengu korral neli sõrme liikumise suunas, negatiivse korral vastu). Tiiru aeg T = 2πm/(|q|B) ei sõltu kiirusest. Kiirused on väikesed võrreldes valguse kiirusega (relatiivsusteooriat pole vaja).<br>
-      • <b>Mudel:</b> väli arvutatakse Biot'–Savart'i seadusest. Pulkmagnet = ühtlaselt magneeditud risttahukas (samaväärne pinnavooluga). Solenoidi väli arvutatakse N ringvoolu summana (keerdude tõus jäetakse arvestamata). Ringjuhtme ja solenoidi juhtmeotste välja ei arvestata. Juhe magnetväljas: magnetpooluste vahel on väli homogeenne, väljaspool loetakse see nulliks.
+      • <b>Mudel:</b> väli arvutatakse Biot'–Savart'i seadusest. Pulkmagnet = ühtlaselt magneeditud risttahukas (samaväärne pinnavooluga). Solenoidi väli arvutatakse N ringvoolu summana (keerdude tõus jäetakse arvestamata). Ringjuhtme ja solenoidi juhtmeotste välja ei arvestata. Juhe magnetväljas: U-magnet on magneeditud piki oma kuju, seega tekivad „magnetlaengud“ ainult poolustahkudele (Gilberti mudel); väli arvutatakse kahe ühtlaselt laetud ristküliku väljana. Väli on pooluste vahe keskel kõige tugevam, nõrgeneb servade poole ja ulatub ka poolustest välja. Jõud arvutatakse kogu juhtme pikkuses: F = I∫dl × B.
     </div>
   </aside>
   <main id="main"><canvas id="cv"></canvas><div id="hint">Lohista, et vaadet pöörata · ratas või kaks sõrme suumib</div></main>
@@ -329,6 +342,47 @@ function chargeStep(Treal){
   pc.time += Treal;
 }
 
+/* ---------- ringmagnet ---------- */
+const RMAG = {Ro:3, Ri:1.2, h:1, M:3e5, N:24};
+const pr = {o:'h', I:3, d:1, y:1.2, yv:3, ang:0, L:6, pos:[3, 0], flip:false, loc:true};
+// ringvool, mille telg on y-telje sihis (I > 0 → väli keskel +y suunas)
+function ringBy(cx, cy, cz, R, I, px, py, pz, out){
+  const t = [0, 0, 0];
+  ringB(cy, cx, cz, R, I, py, px, pz, t);      // x ja y vahetatud (kontrollitud polügooni Biot'–Savart'iga)
+  out[0] += t[1]; out[1] += t[0]; out[2] += t[2];
+}
+// telgsuunas magneeditud ringmagnet = välispinnal pinnavool K = M ja sisepinnal −M (kumbki N ringvoolu)
+function ringMagB(x, y, z, out){
+  const M = pr.flip ? -RMAG.M : RMAG.M, N = RMAG.N, I = M*(RMAG.h/100)/N;
+  for (let i = 0; i < N; i++){ const yy = -RMAG.h/2 + (i + 0.5)*RMAG.h/N; ringBy(0, yy, 0, RMAG.Ro, I, x, y, z, out); ringBy(0, yy, 0, RMAG.Ri, -I, x, y, z, out); }
+}
+const inRingMag = (x, y, z, m = 0) => { const r = Math.hypot(x, z); return Math.abs(y) <= RMAG.h/2 + m && r >= RMAG.Ri - m && r <= RMAG.Ro + m; };
+// juhtme otspunktid (cm), voolu suunas A → B
+function rmWire(){
+  const [x, z] = pr.pos;
+  let A, B;
+  if (pr.o === 'h'){ const c = Math.cos(pr.ang*DEG), sn = Math.sin(pr.ang*DEG); A = [x - c*pr.L/2, pr.y, z - sn*pr.L/2]; B = [x + c*pr.L/2, pr.y, z + sn*pr.L/2]; }
+  else { A = [x, pr.yv - pr.L/2, z]; B = [x, pr.yv + pr.L/2, z]; }
+  return pr.d > 0 ? [A, B] : [B, A];
+}
+// jõud F = I·Σ dl × B, jõumoment magneti telje (y) suhtes; local: jõud pikkusühiku kohta 9 punktis
+function rmForce(){
+  const [A, B] = rmWire(), n = 120, F = [0, 0, 0], b = [0, 0, 0], local = [];
+  let tau = 0;
+  const dl = [0, 1, 2].map(k => (B[k] - A[k])/n/100);       // m
+  const dlen = Math.hypot(...dl);
+  for (let i = 0; i < n; i++){
+    const P = [0, 1, 2].map(k => A[k] + (B[k] - A[k])*(i + 0.5)/n);
+    b[0] = b[1] = b[2] = 0; ringMagB(...P, b);
+    const dF = [pr.I*(dl[1]*b[2] - dl[2]*b[1]), pr.I*(dl[2]*b[0] - dl[0]*b[2]), pr.I*(dl[0]*b[1] - dl[1]*b[0])];
+    F[0] += dF[0]; F[1] += dF[1]; F[2] += dF[2];
+    tau += (P[2]*dF[0] - P[0]*dF[2])/100;                    // (r × dF)_y, r meetrites
+    if (i % 15 === 7) local.push([P, dF.map(v => v/dlen)]);  // N/m
+  }
+  return {F, tau, local};
+}
+let rmF = null;
+
 /* ---------- olukorrad ---------- */
 const MAG = {L:10, w:2, h:1, M:3e5, N:80};
 const RING = {R:4, tube:0.15};
@@ -344,7 +398,8 @@ const VIEWS = {
   ring:  {yaw:-55, pitch:24, size:24, t:[0, 0, 0]},
   sol:   {yaw:-32, pitch:30, size:26, t:[0, 0, 0]},
   force: {yaw:-28, pitch:16, size:24, t:[0, 2, 0]},
-  charge:{yaw:-28, pitch:38, size:30, t:[0, 0, 0]}
+  charge:{yaw:-28, pitch:38, size:30, t:[0, 0, 0]},
+  ringmag:{yaw:-32, pitch:26, size:20, t:[0, 1, 0]}
 };
 // tööpind, millele kompassid asetatakse ja kus „ühel pinnal“ jõujooned on: y = 0 (laud) või z = 0 (püstine)
 const PLANE = {
@@ -355,7 +410,8 @@ const PLANE = {
   ring:  {ax:1, u:[-11, 11], v:[-9, 9]},
   sol:   {ax:1, u:[-14, 14], v:[-8, 8]},
   force: {ax:2, u:[-9, 9], v:[-5.5, 10.5]},
-  charge:{ax:1, u:[-14, 14], v:[-13, 13]}
+  charge:{ax:1, u:[-14, 14], v:[-13, 13]},
+  ringmag:{ax:2, u:[-10, 10], v:[-5, 8]}
 };
 const START_COMPASS = {
   magnet:[[-8, 0], [8, 0], [0, 4], [0, -4], [-5.5, 4], [5.5, -4]],
@@ -365,7 +421,8 @@ const START_COMPASS = {
   ring:  [[0, 0], [8.5, 0], [-8.5, 0], [0, 6.5], [0, -6.5]],
   sol:   [[0, 0], [9, 0], [-9, 0], [0, 4], [0, -4]],
   force: [],
-  charge: []
+  charge: [],
+  ringmag:[[-6, 0], [0, 3.5], [6, 2.5], [-4.5, -2.5]]
 };
 const compasses = {};
 for (const k in START_COMPASS) compasses[k] = START_COMPASS[k].map(([u, v]) => planePt(k, u, v));
@@ -413,10 +470,58 @@ function planePt(sc, u, v){ return PLANE[sc].ax === 1 ? [u, 0, v] : [u, v, 0]; }
 // rippuva juhtme olek (juhe magnetväljas)
 const sw = {th:0, om:0};
 const wirePos = () => [FRC.ell*Math.sin(sw.th), FRC.ell - FRC.ell*Math.cos(sw.th)];   // juhtme (x, y); niitide kinnitus y = ℓ
-function forceX(){                       // Ampère'i jõud F = I·L × B, x-komponent (N)
-  const [xw] = wirePos();
-  if (!p.on || Math.abs(xw) > FRC.a) return 0;
-  return p.If*FRC.Lf*p.dF*p.Bf*(p.flipF ? -1 : 1);
+// U-magneti poolustahud kui ühtlaselt laetud ristkülikud (Gilberti mudel): G = ∫∫ (r − r')/|r − r'|³ dA (dimensioonita)
+function plateG(x1, x2, z1, z2, y0, px, py, pz, out, sgn){
+  const Y = py - y0, Ys = Math.abs(Y) < 1e-9 ? (Y < 0 ? -1e-9 : 1e-9) : Y;
+  for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++){
+    const u = px - (i ? x2 : x1), w = pz - (j ? z2 : z1), R = Math.sqrt(u*u + Y*Y + w*w), s = ((i ^ j) ? -1 : 1)*sgn;
+    out[0] -= s*Math.log(w + R); out[2] -= s*Math.log(u + R); out[1] += s*Math.atan(u*w/(Ys*R));
+  }
+}
+// magnetlaengu pindtihedus valitakse nii, et pooluste vahe keskel oleks B = p.Bf
+let poleK = {Bf:-1, k:0};
+function poleB(x, y, z, out){
+  if (poleK.Bf !== p.Bf){ const g = [0, 0, 0]; plateG(-FRC.a, FRC.a, -FRC.d, FRC.d, FRC.g, 0, 0, 0, g, 1); plateG(-FRC.a, FRC.a, -FRC.d, FRC.d, -FRC.g, 0, 0, 0, g, -1); poleK = {Bf:p.Bf, k:p.Bf/Math.abs(g[1])}; }
+  const sN = p.flipF ? -1 : 1, g = [0, 0, 0];
+  plateG(-FRC.a, FRC.a, -FRC.d, FRC.d, sN*FRC.g, x, y, z, g, 1);       // N-poolus (+)
+  plateG(-FRC.a, FRC.a, -FRC.d, FRC.d, -sN*FRC.g, x, y, z, g, -1);     // S-poolus (−)
+  out[0] += poleK.k*g[0]; out[1] += poleK.k*g[1]; out[2] += poleK.k*g[2];
+}
+// kas punkt on U-magneti sees (poolused või ühendusosa)
+function inUMagnet(x, y, z, m = 0){
+  if (Math.abs(z) > FRC.d + m) return false;
+  if (Math.abs(x) <= FRC.a + m && Math.abs(y) >= FRC.g - m && Math.abs(y) <= FRC.g + FRC.t + m) return true;
+  return x >= -FRC.a - FRC.t - m && x <= -FRC.a + m && Math.abs(y) <= FRC.g + FRC.t + m;
+}
+// Ampère'i jõud kogu juhtmele (12 cm), kui juhe on nurga th juures: F = I·Σ dl × B, dl = dz·ẑ (voolu suund p.dF)
+function forceAt(th){
+  if (!p.on || p.If <= 0) return [0, 0];
+  const xw = FRC.ell*Math.sin(th), yw = FRC.ell - FRC.ell*Math.cos(th), n = 48, dz = 2*FRC.half/n, b = [0, 0, 0];
+  let fx = 0, fy = 0;
+  for (let i = 0; i < n; i++){
+    b[0] = b[1] = b[2] = 0; poleB(xw, yw, -FRC.half + (i + 0.5)*dz, b);
+    fx -= b[1]; fy += b[0];                    // ẑ × B = (−By, Bx, 0)
+  }
+  const k = p.If*p.dF*dz/100;
+  return [fx*k, fy*k];
+}
+function forceX(){ return forceAt(sw.th)[0]; }
+// tasakaalunurk: m·g·sin θ = Fx·cos θ + Fy·sin θ (otsitakse väikseima |θ|-ga lahend)
+function equilibrium(){
+  const f = th => { const [fx, fy] = forceAt(th); return FRC.m*9.81*Math.sin(th) - fx*Math.cos(th) - fy*Math.sin(th); };
+  let best = null;
+  for (const dir of [1, -1]){
+    let a = 0, fa = f(0);
+    for (let k = 1; k <= 160; k++){
+      const b = dir*k*0.5*DEG, fb = f(b);
+      if (fa === 0 || fa*fb < 0){
+        let lo = a, hi = b; for (let it = 0; it < 40; it++){ const mid = (lo + hi)/2; if (f(lo)*f(mid) <= 0) hi = mid; else lo = mid; }
+        const r = (lo + hi)/2; if (best === null || Math.abs(r) < Math.abs(best)) best = r; break;
+      }
+      a = b; fa = fb;
+    }
+  }
+  return best ?? 0;
 }
 // summaarse välja joonisel on juhtme väli võimendatud, et nullpunkt jääks ~1,5 cm kaugusele
 function wireBoost(){
@@ -442,13 +547,14 @@ function fieldAt(x, y, z, out, disp){
       for (let i = 0; i < N; i++) ringB(-SOL.l/2 + (i + 0.5)*SOL.l/N, 0, 0, SOL.R, I, x, y, z, out);
       break;
     }
+    case 'ringmag': ringMagB(x, y, z, out); break;
     case 'charge':
       if ((pc.mode === 'full' || x >= 0) && Math.abs(x) <= 16 && Math.abs(z) <= 14) out[1] = chargeB();
       break;
     case 'force': {
       const [xw, yw] = wirePos();
       const showMag = !disp || p.fview !== 'wire', showWire = !disp || p.fview !== 'mag';
-      if (showMag && Math.abs(x) <= FRC.a && Math.abs(y) <= FRC.g && Math.abs(z) <= FRC.d) out[1] -= p.Bf*(p.flipF ? -1 : 1);
+      if (showMag) poleB(x, y, z, out);
       if (showWire && p.on && p.If > 0 && Math.abs(z) <= FRC.half){
         const tmp = [0, 0, 0]; wireZB(xw, yw, p.If*p.dF, x, y, tmp);
         const k = disp && p.fview === 'sum' ? wireBoost().k : 1;
@@ -466,14 +572,19 @@ function blocked(sc, P){
     case 'magnet': return Math.abs(x) < MAG.L/2 + 0.45 && Math.abs(z) < MAG.w/2 + 0.45 && Math.abs(y) < MAG.h/2 + 0.45;
     case 'mag2': return mag2Cfg().some(m => Math.abs(x - m.cx) < MAG.L/2 + 0.45 && Math.abs(z - m.cz) < MAG.w/2 + 0.45 && Math.abs(y) < MAG.h/2 + 0.45);
     case 'wire': return Math.hypot(x, z) < 0.75;
+    case 'ringmag': {
+      if (inRingMag(x, y, z, 0.45)) return true;
+      const [A, B] = rmWire(), v = [0, 1, 2].map(k => B[k] - A[k]), L2 = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
+      const t = clamp(((x - A[0])*v[0] + (y - A[1])*v[1] + (z - A[2])*v[2])/L2, 0, 1);
+      return Math.hypot(x - A[0] - t*v[0], y - A[1] - t*v[1], z - A[2] - t*v[2]) < 0.75;
+    }
     case 'wires2': return p.wpos.some(([wx, wz]) => Math.hypot(x - wx, z - wz) < 0.75);
     case 'ring': return Math.hypot(Math.hypot(y, z) - RING.R, x) < 0.75;
     case 'sol': return Math.abs(x) < SOL.l/2 + 0.5 && Math.abs(Math.hypot(y, z) - SOL.R) < 0.6;
     case 'force': {
       const [xw, yw] = wirePos();
       if (Math.hypot(x - xw, y - yw) < 0.75) return true;
-      if (Math.abs(x) < FRC.a + 0.45 && Math.abs(y) > FRC.g - 0.45 && Math.abs(y) < FRC.g + FRC.t + 0.45) return true;
-      if (x > -FRC.a - FRC.t - 0.45 && x < -FRC.a + 0.45 && Math.abs(y) < FRC.g + FRC.t + 0.45) return true;
+      if (inUMagnet(x, y, z, 0.45)) return true;
       return false;
     }
   }
@@ -485,6 +596,7 @@ function srcDist(x, y, z){
     case 'magnet': { const dx = Math.max(0, Math.abs(x) - MAG.L/2), dy = Math.max(0, Math.abs(y) - MAG.h/2), dz = Math.max(0, Math.abs(z) - MAG.w/2); return Math.hypot(dx, dy, dz); }
     case 'mag2': return Math.min(...mag2Cfg().map(m => boxDist(m.cx, x, y, z, m.cz)));
     case 'wire': return Math.hypot(x, z);
+    case 'ringmag': { const r = Math.hypot(x, z); return Math.hypot(Math.max(0, RMAG.Ri - r, r - RMAG.Ro), Math.max(0, Math.abs(y) - RMAG.h/2)); }
     case 'wires2': return Math.min(...p.wpos.map(([wx, wz]) => Math.hypot(x - wx, z - wz)));
     case 'ring': return Math.hypot(Math.hypot(y, z) - RING.R, x);
     case 'sol': return Math.hypot(Math.max(0, Math.abs(x) - SOL.l/2), Math.hypot(y, z) - SOL.R);
@@ -647,6 +759,18 @@ function computeLines(){
       }
       break;
     }
+    case 'ringmag': {
+      const angs = p.l3 ? [0, 45, 90, 135] : [0], n = p.l3 ? [2, 3, 4][d] : [3, 5, 8][d];
+      for (const a of angs){
+        const c = Math.cos(a*DEG), sn = Math.sin(a*DEG);
+        for (const sg of [1, -1]) for (let k = 0; k < n; k++){
+          const r = RMAG.Ri + (RMAG.Ro - RMAG.Ri)*(k + 0.5)/n;
+          push([sg*r*c, 0, sg*r*sn], null, false);
+        }
+      }
+      rmF = rmForce();
+      break;
+    }
     case 'charge': {
       const st = [6, 4.5, 3][d], x0 = pc.mode === 'enter' ? 1.5 : -12;
       for (let x = x0; x <= 12.01; x += st) for (let z = -12; z <= 12.01; z += st){
@@ -661,14 +785,16 @@ function computeLines(){
       const [xw, yw] = wirePos();
       const zs = p.l3 ? [-2, 0, 2] : [0];
       const sN = p.flipF ? -1 : 1, g = FRC.g, a = FRC.a;
-      const inGap = (x, y) => Math.abs(x) > a || Math.abs(y) > g;
       for (const z of zs){
+        // jõujoon lõpeb, kui see jõuab magneti sisse (S-poolusele) või vaatealast välja
+        // summaarses vaates on juhtme väli võimendatud – kaugel juhtmest oleks pilt moonutatud, seepärast ainult magneti lähedal
+        const stop = p.fview === 'sum' ? (x, y, zz) => inUMagnet(x, y, zz) || Math.abs(x) > FRC.a + 2.5 || Math.abs(y) > FRC.g + FRC.t
+                                       : (x, y, zz) => inUMagnet(x, y, zz) || Math.abs(x) > 14 || Math.abs(y) > 12;
         if (p.fview !== 'wire'){
           const n = [9, 13, 19][d];
-          const stop = (x, y) => inGap(x, y);
-          for (const x of seedsAcross(n, a*0.98)){
+          for (const x of seedsAcross(n, a*0.995)){
             if (p.fview === 'sum' && Math.hypot(x - xw, sN*(g - 0.002) - yw) < 0.3) continue;
-            const L = integrate(x, sN*(g - 0.002), z, 1, stop, true);
+            const L = integrate(x, sN*(g - 0.01), z, 1, stop, z === 0);
             if (L.pts.length > 6) out.push(addArrows({pts:L.pts}));
           }
           // suletud jõujooned ümber juhtme (summaarse välja nullpunkti ja juhtme vahel)
@@ -679,8 +805,8 @@ function computeLines(){
             for (const sx of [1, -1]){ fieldAt(xw + sx*wb.r0draw, yw, z, b, true); const m = Math.hypot(b[0], b[1]); if (m < best){ best = m; side = sx; } }
             for (const f of [0.3, 0.55, 0.8]){
               const sx = xw + side*wb.r0draw*f;
-              if (Math.abs(sx) > a) continue;
-              const L = traceLine([sx, yw, z], stop, true);
+              if (Math.abs(sx) > a + 2) continue;
+              const L = traceLine([sx, yw, z], stop, z === 0);
               if (L.closed) out.push(addArrows(L));
             }
           }
@@ -751,6 +877,12 @@ function hitObject(sx, sy){
     }
     return best;
   }
+  if (p.scene === 'ringmag'){
+    const [A, B] = rmWire(), a = proj(...A), b = proj(...B);
+    const vx = b[0] - a[0], vy = b[1] - a[1], L2 = vx*vx + vy*vy || 1;
+    const t = clamp(((sx - a[0])*vx + (sy - a[1])*vy)/L2, 0, 1);
+    return Math.hypot(sx - a[0] - t*vx, sy - a[1] - t*vy) < (TOUCH ? 24 : 12) ? {i:0} : null;
+  }
   if (p.scene === 'wires2'){
     let best = null, bd = TOUCH ? 24 : 12;
     p.wpos.forEach(([x0, z0], i) => {
@@ -766,6 +898,11 @@ function hitObject(sx, sy){
 }
 // lohistatud objekti uus asukoht (x, z), kui see on lubatud
 function moveObject(i, x, z){
+  if (p.scene === 'ringmag'){
+    x = clamp(x, -8, 8); z = clamp(z, -8, 8);
+    if (pr.o === 'v'){ const r = Math.hypot(x, z); if (r > RMAG.Ri - 0.35 && r < RMAG.Ro + 0.35) return false; }   // püstine juhe ei läbi magnetit
+    pr.pos = [x, z]; rmF = rmForce(); dirty = true; return true;
+  }
   if (p.scene === 'mag2'){
     const pl = PLANE.mag2;
     x = clamp(x, pl.u[0] + MAG.L/2, pl.u[1] - MAG.L/2); z = clamp(z, pl.v[0] + 1, pl.v[1] - 1);
@@ -932,6 +1069,27 @@ function sceneObjects(){
       curArrow(xi, y, z, 0, -Math.sin(t)*p.dS, Math.cos(t)*p.dS, 0.55, 0.5);
     }
     poleLabels(l/2 + 1.6);
+  } else if (sc === 'ringmag'){
+    addRingMagnet();
+    const [A, B] = rmWire(), n = 24, P = [];
+    for (let i = 0; i <= n; i++) P.push([0, 1, 2].map(k => A[k] + (B[k] - A[k])*i/n));
+    addTube(P, 0.3, COL.cu, false);
+    const u = [0, 1, 2].map(k => (B[k] - A[k])/pr.L);
+    for (const t of [0.22, 0.78]) curArrow(...[0, 1, 2].map(k => A[k] + (B[k] - A[k])*t), ...u, 0.6, 0.6);
+    // toitejuhtmed (hallid): rõhtsa juhtme otstest üles, püstise juhtme ülemisest otsast üles ja alumisest otsast eemale
+    if (pr.o === 'h') for (const E of [A, B]) addTube([E, [E[0], 7.5, E[2]]], 0.12, '#94a3b8', false);
+    else {
+      const top = A[1] > B[1] ? A : B, bot = A[1] > B[1] ? B : A, r = Math.hypot(bot[0], bot[2]) || 1;
+      addTube([top, [top[0], 7.5, top[2]]], 0.12, '#94a3b8', false);
+      addTube([bot, [bot[0] + bot[0]/r*5, bot[1], bot[2] + bot[2]/r*5]], 0.12, '#94a3b8', false);
+    }
+    if (rmF){
+      // juhtme osadele mõjuv jõud: suurima noole pikkus 2 cm (suhteline skaala)
+      const mx = Math.max(...rmF.local.map(([, f]) => Math.hypot(...f)));
+      if (pr.loc && mx > 1e-9) for (const [Q, f] of rmF.local){ const m = Math.hypot(...f); if (m > 0.04*mx) add3DArrow(Q, f.map(v => v/mx*2), '#4ade80', null, 0.4); }
+      const Fm = Math.hypot(...rmF.F);
+      if (Fm > 1e-7){ const C = [0, 1, 2].map(k => (A[k] + B[k])/2), len = clamp(Fm*1000*1.2, 1, 6); add3DArrow(C, rmF.F.map(v => v/Fm*len), '#15803d', 'F', 1); }
+    }
   } else if (sc === 'charge'){
     const I = chargeInfo();
     if (pc.mode === 'enter'){      // väljapiirkonna serv x = 0
@@ -979,6 +1137,34 @@ function sceneObjects(){
     // Ampère'i jõud
     const F = forceX();
     if (Math.abs(F) > 1e-6) add3DArrow([xw, yw, 0], [F*300, 0, 0], COL.F, 'F', 3);
+  }
+}
+// ringmagnet tahkudega (ülemine pool N, alumine S, kui magneeditud +y suunas)
+function addRingMagnet(){
+  const {Ro, Ri, h} = RMAG, nA = 48, up = pr.flip ? COL.S : COL.N, dn = pr.flip ? COL.N : COL.S;
+  const face = (P, n, col) => {
+    const c = [0, 1, 2].map(k => (P[0][k] + P[2][k])/2), vd = [0, 1, 2].map(k => c[k] - cam.pos[k]);
+    if (n[0]*vd[0] + n[1]*vd[1] + n[2]*vd[2] >= 0) return;
+    const Q = P.map(q => proj(...q)), fill = shade(col, n);
+    prims.push({k:'poly', d:Q.reduce((a, q) => a + q[2], 0)/4, pts:Q.flatMap(q => [q[0], q[1]]), fill, stroke:fill, lw:0.8});
+  };
+  for (let i = 0; i < nA; i++){
+    const a0 = 2*Math.PI*i/nA, a1 = 2*Math.PI*(i + 1)/nA, am = (a0 + a1)/2;
+    const pt = (r, a, y) => [r*Math.cos(a), y, r*Math.sin(a)];
+    for (const [y0, y1, col] of [[0, h/2, up], [-h/2, 0, dn]]){
+      face([pt(Ro, a0, y0), pt(Ro, a1, y0), pt(Ro, a1, y1), pt(Ro, a0, y1)], [Math.cos(am), 0, Math.sin(am)], col);
+      face([pt(Ri, a0, y0), pt(Ri, a1, y0), pt(Ri, a1, y1), pt(Ri, a0, y1)], [-Math.cos(am), 0, -Math.sin(am)], col);
+    }
+    for (const [rA, rB] of [[Ri, (Ri + Ro)/2], [(Ri + Ro)/2, Ro]]){
+      face([pt(rA, a0, h/2), pt(rB, a0, h/2), pt(rB, a1, h/2), pt(rA, a1, h/2)], [0, 1, 0], up);
+      face([pt(rA, a0, -h/2), pt(rB, a0, -h/2), pt(rB, a1, -h/2), pt(rA, a1, -h/2)], [0, -1, 0], dn);
+    }
+  }
+  // tähed välispinnal kaamera poolsel küljel
+  const ac = Math.atan2(cam.pos[2], cam.pos[0]);
+  for (const [y, t] of [[h/4, pr.flip ? 'S' : 'N'], [-h/4, pr.flip ? 'N' : 'S']]){
+    const q = proj(Ro*Math.cos(ac), y, Ro*Math.sin(ac));
+    prims.push({k:'txt', d:q[2] - 0.3, x:q[0], y:q[1], s:t, c:'#fff', size:clamp(0.4*q[3], 9, 22)});
   }
 }
 function poleLabels(off){      // solenoidi / ringi otsad: kust jõujooned väljuvad (N) ja kuhu sisenevad (S)
@@ -1144,7 +1330,7 @@ function physB(P){
   const b = [0, 0, 0];
   if (p.scene !== 'force') return fieldAt(P[0], P[1], P[2], b, false);
   const [xw, yw] = wirePos();
-  if (p.fview !== 'wire' && Math.abs(P[0]) <= FRC.a && Math.abs(P[1]) <= FRC.g && Math.abs(P[2]) <= FRC.d) b[1] -= p.Bf*(p.flipF ? -1 : 1);
+  if (p.fview !== 'wire' && !inUMagnet(P[0], P[1], P[2])) poleB(P[0], P[1], P[2], b);
   if (p.fview !== 'mag' && p.on && p.If > 0) wireZB(xw, yw, p.If*p.dF, P[0], P[1], b);
   return b;
 }
@@ -1160,9 +1346,9 @@ function readout(){
     }
     if (p.scene === 'force'){
       const bm = [0, 0, 0], bw = [0, 0, 0], [xw, yw] = wirePos();
-      if (Math.abs(probe[0]) <= FRC.a && Math.abs(probe[1]) <= FRC.g) bm[1] = p.Bf;
+      if (!inUMagnet(...probe)) poleB(probe[0], probe[1], probe[2], bm);
       if (p.on && p.If > 0) wireZB(xw, yw, p.If, probe[0], probe[1], bw);
-      h += `<div class="small">magneti väli ${fmtB(bm[1])}, juhtme väli ${fmtB(Math.hypot(bw[0], bw[1]))}</div>`;
+      h += `<div class="small">magneti väli ${fmtB(Math.hypot(...bm))}, juhtme väli ${fmtB(Math.hypot(bw[0], bw[1]))}</div>`;
     }
   } else h += `<div class="small">${TOUCH ? 'Puuduta pinda („Pööra vaadet“ režiimis), et mõõta välja.' : 'Vii hiirekursor helehallile pinnale, et mõõta välja.'}</div>`;
   h += '<div class="note">';
@@ -1208,6 +1394,20 @@ function readout(){
       h += `Solenoidi keskel (arvutatud) B = ${fmtB(Math.abs(b[0]))}.<br>Lõpliku pikkusega solenoidi valem keskpunktis: B = μ₀NI/l · (l/2)/√((l/2)² + R²) = ${fmtB(fin)}.<br>Pika solenoidi valem B = μ₀NI/l = ${fmtB(ideal)}.<br>Sees on väli peaaegu homogeenne, väljas on see palju nõrgem; solenoid käitub nagu pulkmagnet.`;
       break;
     }
+    case 'ringmag': {
+      if (!rmF) rmF = rmForce();
+      const [A, B] = rmWire(), C = [0, 1, 2].map(k => (A[k] + B[k])/2), bc = [0, 0, 0]; ringMagB(...C, bc);
+      const F = rmF.F, Fh = Math.hypot(F[0], F[2]), sci = v => { if (Math.abs(v) < 1e-12) return '0'; const e = Math.floor(Math.log10(Math.abs(v))); return fmt(v/10**e, 2) + '·10<sup>' + minus(e) + '</sup>'; };
+      h += `<table>
+        <tr><td>B juhtme keskel</td><td>${fmtB(Math.hypot(...bc))}</td></tr>
+        <tr><td>kogujõud juhtmele F</td><td>${fmt(Math.hypot(...F)*1000, 2)} mN</td></tr>
+        <tr><td>&nbsp;&nbsp;püstkomponent</td><td>${fmt(Math.abs(F[1])*1000, 2)} mN ${Math.abs(F[1]) > 1e-6 ? (F[1] > 0 ? '(üles)' : '(alla)') : ''}</td></tr>
+        <tr><td>&nbsp;&nbsp;rõhtkomponent</td><td>${fmt(Fh*1000, 2)} mN</td></tr>
+        <tr><td>jõumoment magneti telje suhtes</td><td>${sci(Math.abs(rmF.tau))} N·m</td></tr>
+      </table>`;
+      h += `<div style="margin-top:4px">Väli muutub juhtme eri kohtades nii suunalt kui ka suuruselt, seepärast on ka jõud juhtme eri osadele erinev (helerohelised nooled, suhteline skaala). Tumeroheline nool on kogujõud.${Math.abs(rmF.tau) > 1e-6 ? ' Jõumoment telje suhtes paneks telje ümber vabalt pöörleva juhtme pöörlema (lihtsa elektrimootori põhimõte).' : ''}</div>`;
+      break;
+    }
     case 'charge': {
       const I = chargeInfo(), sp = v => sig3(v);
       const tScale = I.T/4;
@@ -1229,15 +1429,16 @@ function readout(){
       break;
     }
     case 'force': {
-      const F = forceX(), Fmax = p.If*FRC.Lf*p.Bf*(p.on ? 1 : 0), mg = FRC.m*9.81;
-      const aeq = Math.atan(Fmax/mg)/DEG;
+      const F0 = Math.abs(forceAt(0)[0]), Fsim = p.If*FRC.Lf*p.Bf*(p.on ? 1 : 0), mg = FRC.m*9.81, Fnow = forceAt(sw.th);
+      const aeq = equilibrium()/DEG;
       h += `<table>
-        <tr><td>Ampère'i jõud F = B·I·L</td><td>${fmt(Fmax*1000, 1)} mN</td></tr>
+        <tr><td>jõud otse rippuvale juhtmele (arvutatud kogu juhtmel)</td><td>${fmt(F0*1000, 1)} mN</td></tr>
+        <tr><td>lihtne hinnang B·I·L (L = 5 cm, pooluse laius)</td><td>${fmt(Fsim*1000, 1)} mN</td></tr>
         <tr><td>raskusjõud mg</td><td>${fmt(mg*1000, 1)} mN</td></tr>
-        <tr><td>tasakaalus tan α = F/(mg)</td><td>α = ${fmt(aeq, 1)}°</td></tr>
-        <tr><td>praegu kõrvalekalle</td><td>${fmt(Math.abs(sw.th)/DEG, 1)}° ${Math.abs(sw.th) > 0.002 ? (sw.th > 0 ? 'paremale' : 'vasakule') : ''}</td></tr>
+        <tr><td>tasakaalunurk (arvutatud)</td><td>α = ${fmt(Math.abs(aeq), 1)}°</td></tr>
+        <tr><td>praegu: kõrvalekalle / jõud</td><td>${fmt(Math.abs(sw.th)/DEG, 1)}° / ${fmt(Math.hypot(...Fnow)*1000, 1)} mN</td></tr>
       </table>`;
-      if (Math.abs(wirePos()[0]) > FRC.a) h += '<div>Juhe on väljunud magnetpooluste vahelt, seal jõudu ei mõju.</div>';
+      h += '<div style="margin-top:4px">Väli on pooluste vahe keskel kõige tugevam ja nõrgeneb servade poole; väli ulatub ka poolustest välja, seepärast mõjub jõud ka juhtme sellele osale, mis on pooluste vahelt väljas. Kui juhe kaldub keskelt eemale, jääb jõud väiksemaks.</div>';
       if (p.fview === 'sum'){
         const wb = wireBoost();
         if (wb.k > 0) h += `<div style="margin-top:4px">Summaarne väli on juhtme ühel pool tugevam (jõujooned tihedamad) ja teisel pool nõrgem; juhe tõugatakse nõrgema välja poole. <b>Joonisel on juhtme välja võimendatud umbes ${Math.round(wb.k).toLocaleString('et-EE')} korda</b>: tegelikult oleks väljade tasakaalupunkt juhtmest vaid ${sig3(wb.r0real*10)} mm kaugusel.</div>`;
@@ -1262,7 +1463,7 @@ function refresh(){
 function setScene(s){
   p.scene = s; probe = null;
   document.querySelectorAll('#scenes button').forEach(b => b.classList.toggle('on', b.dataset.s === s));
-  for (const [id, sc] of [['setMagnet', 'magnet'], ['setMag2', 'mag2'], ['setWires2', 'wires2'], ['setWire', 'wire'], ['setRing', 'ring'], ['setSol', 'sol'], ['setForce', 'force'], ['setCharge', 'charge']]) $(id).classList.toggle('on', sc === s);
+  for (const [id, sc] of [['setMagnet', 'magnet'], ['setMag2', 'mag2'], ['setWires2', 'wires2'], ['setWire', 'wire'], ['setRing', 'ring'], ['setSol', 'sol'], ['setForce', 'force'], ['setCharge', 'charge'], ['setRingmag', 'ringmag']]) $(id).classList.toggle('on', sc === s);
   $('rowXray').style.display = s === 'magnet' || s === 'mag2' ? 'flex' : 'none';
   if (s === 'force'){ sw.th = 0; sw.om = 0; }
   if (s === 'charge') chargeReset();
@@ -1314,6 +1515,28 @@ $('btnCplay').onclick = () => { pc.play = !pc.play; $('btnCplay').textContent = 
 $('btnCreset').onclick = () => { chargeReset(); dirty = true; };
 $('optCvec').onchange = e => { pc.vec = e.target.checked; dirty = true; };
 chargeSliders();
+// ringmagneti juhtelemendid
+function rmSync(){
+  syncSeg('segRo', pr.o); syncSeg('segRd', pr.d);
+  const ry = $('rRy');
+  if (pr.o === 'h'){ [ry.min, ry.max, ry.step] = [0.8, 6, 0.1]; ry.value = pr.y; $('vRy').textContent = fmt(pr.y, 1) + ' cm'; }
+  else { [ry.min, ry.max, ry.step] = [-3, 3, 0.1]; ry.value = pr.yv; $('vRy').textContent = fmt(pr.yv, 1) + ' cm'; }
+  $('rRi').value = pr.I; $('vRi').textContent = fmt(pr.I, 1) + ' A';
+  $('rRa').value = pr.ang; $('vRa').textContent = fmt(pr.ang, 0) + '°';
+  $('rRl').value = pr.L; $('vRl').textContent = fmt(pr.L, 1) + ' cm';
+  $('rowRa').style.opacity = pr.o === 'h' ? 1 : 0.4; $('rRa').disabled = pr.o !== 'h';
+}
+const rmChanged = () => { rmSync(); rmF = rmForce(); dirty = true; };
+document.querySelectorAll('#segRo button').forEach(b => b.onclick = () => { pr.o = b.dataset.v; if (pr.o === 'v'){ pr.pos = [4.5, 0]; pr.yv = 3; } else { pr.pos = [3, 0]; pr.ang = 0; } rmChanged(); });
+document.querySelectorAll('#segRd button').forEach(b => b.onclick = () => { pr.d = +b.dataset.v; rmChanged(); });
+$('rRi').oninput = e => { pr.I = +e.target.value; rmChanged(); };
+$('rRy').oninput = e => { if (pr.o === 'h') pr.y = +e.target.value; else pr.yv = +e.target.value; rmChanged(); };
+$('rRa').oninput = e => { pr.ang = +e.target.value; rmChanged(); };
+$('rRl').oninput = e => { pr.L = +e.target.value; rmChanged(); };
+$('btnRflip').onclick = () => { pr.flip = !pr.flip; rmSync(); refresh(); };
+$('btnRreset').onclick = () => { Object.assign(pr, {o:'h', I:3, d:1, y:1.2, yv:3, ang:0, L:6, pos:[3, 0]}); rmChanged(); };
+$('optRloc').onchange = e => { pr.loc = e.target.checked; dirty = true; };
+rmSync();
 $('optArr').onchange = e => { p.arrows = e.target.checked; dirty = true; };
 $('optXray').onchange = e => { p.xray = e.target.checked; dirty = true; };
 $('optAuto').onchange = e => { p.auto = e.target.checked; };
@@ -1355,8 +1578,9 @@ cv.addEventListener('pointerdown', e => {
   if (ci < 0){
     const h = hitObject(x, y);
     if (h){
-      const P = rayAtY(x, y, 0), pos = p.scene === 'mag2' ? p.mpos[h.i] : p.wpos[h.i];
-      if (P) obj = {i:h.i, off:[pos[0] - P[0], pos[1] - P[2]]};
+      const yRef = p.scene === 'ringmag' ? (pr.o === 'h' ? pr.y : pr.yv) : 0;
+      const P = rayAtY(x, y, yRef), pos = p.scene === 'mag2' ? p.mpos[h.i] : p.scene === 'wires2' ? p.wpos[h.i] : pr.pos;
+      if (P) obj = {i:h.i, y:yRef, off:[pos[0] - P[0], pos[1] - P[2]]};
     }
   }
   drag = {x0:x, y0:y, x, y, moved:false, ci, obj, yaw:cam.yaw, pitch:cam.pitch};
@@ -1373,8 +1597,8 @@ cv.addEventListener('pointermove', e => {
     if (!drag.moved && Math.hypot(x - drag.x0, y - drag.y0) > 5) drag.moved = true;
     if (!drag.moved) return;
     if (drag.obj){
-      const P = rayAtY(x, y, 0);
-      if (P && moveObject(drag.obj.i, P[0] + drag.obj.off[0], P[2] + drag.obj.off[1])){ fast = true; needLines = true; }
+      const P = rayAtY(x, y, drag.obj.y);
+      if (P && moveObject(drag.obj.i, P[0] + drag.obj.off[0], P[2] + drag.obj.off[1]) && p.scene !== 'ringmag'){ fast = true; needLines = true; }
     } else if (drag.ci >= 0 && p.tool === 'compass'){
       const P = planeHit(x, y);
       if (P && !blocked(p.scene, P)){ compasses[p.scene][drag.ci] = P; dirty = true; }
@@ -1413,8 +1637,8 @@ let last = performance.now();
 function stepSwing(T){
   const g = 9.81, l = FRC.ell/100, dt = 0.001;
   for (let t = 0; t < T; t += dt){
-    const F = forceX();
-    const acc = (-g*Math.sin(sw.th) + F/FRC.m*Math.cos(sw.th))/l - FRC.gamma*sw.om;
+    const [fx, fy] = forceAt(sw.th);
+    const acc = (-g*Math.sin(sw.th) + (fx*Math.cos(sw.th) + fy*Math.sin(sw.th))/FRC.m)/l - FRC.gamma*sw.om;
     sw.om += acc*dt; sw.th += sw.om*dt;
   }
 }
@@ -1460,7 +1684,7 @@ if (/github\.io$/.test(location.hostname)) $('back').style.display = 'block';
 if (TOUCH) $('hint').textContent = 'Lohista sõrmega, et vaadet pöörata · kahe sõrmega suumi';
 cv.style.cursor = 'grab';
 setScene('magnet'); resize(); requestAnimationFrame(loop);
-window.__mv = {pc, chargeInfo, chargeReset, chargeStep, chargeB, set fast(v){ fast = v; }, gridB, buildGrid, hitObject, moveObject, magnetForce, mag2Cfg, get magF(){ return magF; }, p, cam, sw, fieldAt, computeLines, get lines(){ return lines; }, compasses, setScene, setView, draw, proj, planeHit, forceX, wireBoost, stepSwing, wirePos, blocked};
+window.__mv = {pr, rmForce, rmWire, ringMagB, ringBy, forceAt, equilibrium, poleB, plateG, inUMagnet, pc, chargeInfo, chargeReset, chargeStep, chargeB, set fast(v){ fast = v; }, gridB, buildGrid, hitObject, moveObject, magnetForce, mag2Cfg, get magF(){ return magF; }, p, cam, sw, fieldAt, computeLines, get lines(){ return lines; }, compasses, setScene, setView, draw, proj, planeHit, forceX, wireBoost, stepSwing, wirePos, blocked};
 </script>
 <div id="vmodal" role="dialog" aria-modal="true" aria-label="Videojuhend">
   <div class="vbox">
