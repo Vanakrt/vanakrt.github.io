@@ -62,7 +62,7 @@ module.exports = {scenes:[
     await a.wait(3);
     await a.click('#segD2 button[data-v="-1"]');
   }},
-  {name:'Ampère', speech:'s10', caption:'F = B·I·L = 0,05 T · 3 A · 0,05 m = 7,5 mN → juhe kaldub ≈ 9°.', run:async a => {
+  {name:'Ampère', speech:'s10', caption:'Homogeenses väljas F = B·I·L. U-magneti väli ulatub poolustest välja: F = 10,5 mN, juhe kaldub 11,5°.', run:async a => {
     await a.click('#scenes button[data-s="force"]');
     await a.moveTo(1150, 670, 0.5, false);
     await a.wait(3);
@@ -75,6 +75,13 @@ module.exports = {scenes:[
     await a.click('#segDF button[data-v="-1"]');
     await a.moveTo(1150, 670, 0.5, false);
     await a.wait(3);
+  }},
+  {name:'ringmagnet', speech:'s15', caption:'Ringmagneti väli ei ole homogeenne: juhtme osadele mõjub erinev jõud; jõumoment telje suhtes – elektrimootori põhimõte.', tail:1.2, run:async a => {
+    await a.click('#scenes button[data-s="ringmag"]');
+    await a.moveTo(1150, 670, 0.5, false);
+    await a.wait(3);
+    await a.dragWorld([4.5, 1.2, 0], [4.5, 1.2, 3.5], 2);
+    await a.moveTo(1150, 670, 0.5, false);
   }},
   {name:'Lorentz', speech:'s12', caption:'Lorentzi jõud F = |q|vB on risti kiirusega → osake liigub ringjoonel, r = mv/(|q|B).', run:async a => {
     await a.click('#scenes button[data-s="charge"]');

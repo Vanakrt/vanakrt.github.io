@@ -16,7 +16,7 @@ module.exports = {scenes:[
     await a.wait(2.8);
     await a.click('#segView button[data-v="3d"]');
   }},
-  {name:'kompass', speech:'t3', caption:'„Lisa kompass“ ja klõps pinnal. Punane nõelaots näitab välja suunda.', run:async a => {
+  {name:'kompass', speech:'t3', caption:'„Lisa kompass“ ja klõps pinnal. Sinine nõelaots (N) näitab välja suunda.', run:async a => {
     await a.click('#segTool button[data-v="compass"]');
     await a.clickWorld([-3, 0, 6.5]);
     await a.wait(0.4);
@@ -65,6 +65,15 @@ module.exports = {scenes:[
     await a.wait(2.6);
     await a.click('#segDF button[data-v="-1"]');
     await a.wait(2.5);
+  }},
+  {name:'ringmagnet', speech:'t13', caption:'Juhe ringmagneti väljas: lohista, keera, tõsta või pane püsti. Heledad nooled: jõud juhtme eri osadele.', tail:1.2, run:async a => {
+    await a.click('#scenes button[data-s="ringmag"]');
+    await a.wait(0.6);
+    await a.dragWorld([4.5, 1.2, 0], [4.5, 1.2, 3], 1.6);
+    await a.slider('#rRa', 60, 1.0);
+    await a.wait(0.4);
+    await a.click('#segRo button[data-v="v"]');
+    await a.wait(1.0);
   }},
   {name:'laetud osake', speech:'t11', caption:'Laetud osake: osake, kiirus, B ja lennusuuna nurk.', run:async a => {
     await a.click('#scenes button[data-s="charge"]');

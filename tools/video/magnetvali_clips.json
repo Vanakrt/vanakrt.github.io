@@ -2,7 +2,7 @@
  "t0": "Magnetvälja simulatsioon. Vaatame, kuidas seda tunnis kasutada.",
  "t1": "Joonis on ruumiline. Vaadet saab pöörata, kui lohistad hiire või sõrmega. Suumida saab hiire ratta või kahe sõrmega.",
  "t2": "Nuppudega saab valida valmis vaate, näiteks pealt. Nii tekib tavaline õpikujoonis.",
- "t3": "Kompassi lisamiseks vali „Lisa kompass“ ja klõpsa helehallil pinnal. Punane nõelaots näitab välja suunda.",
+ "t3": "Kompassi lisamiseks vali „Lisa kompass“ ja klõpsa helehallil pinnal. Sinine nõelaots on põhjapoolus ja näitab välja suunda.",
  "t4": "Nupp „Kompassid ruudustikku“ katab kogu pinna kompassidega.",
  "t5": "Kui viid kursori pinnale, näitab sinine nool välja suunda ja kõrval on magnetinduktsiooni väärtus. Telefonis tuleb pinda puudutada.",
  "t6": "Jõujooni saab näidata ühel pinnal või ruumiliselt, mitmel tasandil korraga.",
@@ -20,11 +20,13 @@
  "s7": "Väli nõrgeneb kaugusega. Viie amprise voolu korral on magnetinduktsioon kahe sentimeetri kaugusel viiskümmend mikroteslat, nelja sentimeetri kaugusel poole väiksem.",
  "s8": "Solenoidi sees on väli peaaegu homogeenne. Väljaspool on see nõrk ja solenoid käitub nagu pulkmagnet.",
  "s9": "Paralleelsed vooluga juhtmed mõjutavad teineteist. Samas suunas vooluga juhtmed tõmbuvad, vastassuunas vooluga juhtmed tõukuvad.",
- "s10": "Magnetväljas olevale vooluga juhtmele mõjub jõud F, mis võrdub B korda I korda L. Kolme amprise voolu ja viie sajandiku tesla korral on jõud seitse koma viis millinjuutonit ja juhe kaldub umbes üheksa kraadi.",
+ "s10": "Magnetväljas olevale vooluga juhtmele mõjub jõud. Homogeenses väljas oleks see B korda I korda L. U-magneti väli ulatub ka poolustest välja, seepärast on jõud siin kümme koma viis millinjuutonit ja juhe kaldub üksteist koma viis kraadi.",
  "s11": "Jõu suuna annab vasaku käe reegel. Kui jõujooned sisenevad peopessa ja sõrmed näitavad voolu suunda, näitab väljasirutatud pöial jõu suunda.",
  "t11": "Uues olukorras liigub laetud osake magnetväljas. Saab valida osakese, kiiruse, magnetinduktsiooni ja lennusuuna nurga välja suhtes.",
  "t12": "Energiakao liuguriga kaotab osake igal tiirul osa energiast ja rada keerdub sissepoole, nagu mullikambri piltidel.",
  "s12": "Ka liikuvale laetud osakesele mõjub magnetväljas jõud, mida nimetatakse Lorentzi jõuks. See on alati risti kiirusega, seepärast liigub osake ringjoonel ja tema kiiruse suurus ei muutu.",
  "s13": "Kui osake lendab välja suhtes viltu, liigub ta mööda spiraali.",
- "s14": "Kui osake kaotab energiat, väheneb ringi raadius ja rada keerdub sissepoole. Nii näevad välja osakeste jäljed mullikambris."
+ "s14": "Kui osake kaotab energiat, väheneb ringi raadius ja rada keerdub sissepoole. Nii näevad välja osakeste jäljed mullikambris.",
+ "t13": "Juhet ringmagneti väljas saab lohistada, keerata ja tõsta ning panna ka püstiseks. Heledad nooled näitavad jõudu juhtme eri osadele.",
+ "s15": "Ringmagneti väli ei ole homogeenne, seepärast mõjub juhtme eri osadele erinev jõud. Kui jõud tekitab jõumomendi magneti telje suhtes, hakkaks juhe telje ümber pöörlema. Nii töötab lihtne elektrimootor."
 }
