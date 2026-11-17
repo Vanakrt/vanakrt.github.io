@@ -725,7 +725,7 @@ function shade(hex, n){
   const [r, g, b] = hexRgb(hex);
   return `rgb(${Math.round(r*k)},${Math.round(g*k)},${Math.round(b*k)})`;
 }
-const COL = {line:'#334155', N:'#dc2626', S:'#2563eb', cu:'#b87333', cur:'#ea580c', F:'#16a34a', B:'#7c3aed', probe:'#0891b2', gray:'#9ca3af'};
+const COL = {line:'#334155', N:'#dc2626', S:'#2563eb', cu:'#b87333', cur:'#ea580c', curArrow:'#facc15', F:'#16a34a', B:'#7c3aed', probe:'#0891b2', gray:'#9ca3af'};
 let prims = [], dNear = 0, dFar = 1;
 function addBox(x0, x1, y0, y1, z0, z1, col, tile, labels){
   const faces = [
@@ -770,14 +770,17 @@ function addTube(P, w, col, hl){         // P: maailmapunktid [[x,y,z],...]
     prims.push({k:'tube', d:(a[2] + b[2])/2, x1:a[0], y1:a[1], x2:b[0], y2:b[1], w:Math.max(2.2, w*(a[3] + b[3])/2), c:col, hl});
   }
 }
-function addArrowHead(x, y, z, tx, ty, tz, size, col, bias){
+function addArrowHead(x, y, z, tx, ty, tz, size, col, bias, st){
   const a = proj(x, y, z), b = proj(x + tx*0.3, y + ty*0.3, z + tz*0.3);
   let dx = b[0] - a[0], dy = b[1] - a[1]; const L = Math.hypot(dx, dy);
   if (L < 0.02*a[3]) return;
   dx /= L; dy /= L;
-  const s = clamp(size*a[3], 5, 13), cx = a[0] + dx*s*0.5, cy = a[1] + dy*s*0.5;
-  prims.push({k:'poly', d:a[2] - (bias || 0), pts:[cx, cy, cx - dx*s - dy*s*0.45, cy - dy*s + dx*s*0.45, cx - dx*s + dy*s*0.45, cy - dy*s - dx*s*0.45], fill:col});
+  const s = clamp(size*a[3], st ? st.min : 5, st ? st.max : 13), cx = a[0] + dx*s*0.5, cy = a[1] + dy*s*0.5;
+  prims.push({k:'poly', d:a[2] - (bias || 0), pts:[cx, cy, cx - dx*s - dy*s*0.5, cy - dy*s + dx*s*0.5, cx - dx*s*0.72, cy - dy*s*0.72, cx - dx*s + dy*s*0.5, cy - dy*s - dx*s*0.5], fill:col, stroke:st && st.stroke, lw:st && st.lw});
 }
+// voolu suund juhtmel: suur kollane nool tumeda äärega (eristub vaskjuhtmest)
+const CUR_ST = {min:11, max:24, stroke:'#111827', lw:1.8};
+const curArrow = (x, y, z, tx, ty, tz, size, bias) => addArrowHead(x, y, z, tx, ty, tz, size*1.75, COL.curArrow, bias, CUR_ST);
 function add3DArrow(o, v, col, lbl, bias){     // nool maailmas (ekraanil joone ja otsana)
   const e = [o[0] + v[0], o[1] + v[1], o[2] + v[2]];
   const a = proj(...o), b = proj(...e);
@@ -809,7 +812,7 @@ function sceneObjects(){
     p.wpos.forEach(([x0, z0], i) => {
       const P = []; for (let y = -11; y <= 11.001; y += 0.5) P.push([x0, y, z0]);
       addTube(P, 0.32, COL.cu, false);
-      for (const y of [-7, -2.5, 2.5, 7]) addArrowHead(x0, y, z0, 0, dirs[i], 0, 0.7, COL.cur, 0.6);
+      for (const y of [-7, -2.5, 2.5, 7]) curArrow(x0, y, z0, 0, dirs[i], 0, 0.7, 0.6);
       const q = proj(x0, 11.9*dirs[i], z0); prims.push({k:'txt', d:q[2] - 1, x:q[0], y:q[1], s:i ? 'I₂' : 'I₁', c:COL.cur, size:16, halo:true});
     });
     // jõud: samas suunas → tõmbuvad, vastassuunas → tõukuvad (piki juhtmeid ühendavat sirget)
@@ -820,7 +823,7 @@ function sceneObjects(){
   } else if (sc === 'wire'){
     const P = []; for (let y = -11; y <= 11.001; y += 0.5) P.push([0, y, 0]);
     addTube(P, 0.32, COL.cu, false);
-    for (const y of [-7, -2.5, 2.5, 7]) addArrowHead(0, y, 0, 0, p.dW, 0, 0.7, COL.cur, 0.6);
+    for (const y of [-7, -2.5, 2.5, 7]) curArrow(0, y, 0, 0, p.dW, 0, 0.7, 0.6);
     const q = proj(0, 11.8*p.dW, 0); prims.push({k:'txt', d:q[2] - 1, x:q[0], y:q[1], s:'I', c:COL.cur, size:16, halo:true});
   } else if (sc === 'ring'){
     const R = RING.R, gap = 6*DEG, P = [];
@@ -831,7 +834,7 @@ function sceneObjects(){
     addTube([[0, yg, -zg], [0, yg - 3, -zg]], 0.3, COL.cu, false);
     for (const t of [0, Math.PI/2, Math.PI*0.75, -Math.PI/2, -Math.PI*0.75, Math.PI/4, -Math.PI/4]){
       const y = R*Math.cos(t), z = R*Math.sin(t);
-      addArrowHead(0, y, z, 0, -Math.sin(t)*p.dR, Math.cos(t)*p.dR, 0.7, COL.cur, 0.6);
+      curArrow(0, y, z, 0, -Math.sin(t)*p.dR, Math.cos(t)*p.dR, 0.7, 0.6);
     }
     poleLabels(6.5);
   } else if (sc === 'sol'){
@@ -841,14 +844,12 @@ function sceneObjects(){
     addTube(P, 0.24, COL.cu, false);
     addTube([[-l/2, -R, 0], [-l/2, -R - 3, 0]], 0.24, COL.cu, false);
     addTube([[l/2, -R, 0], [l/2, -R - 3, 0]], 0.24, COL.cu, false);
-    const every = Math.max(1, Math.round(N/8));
-    for (let k = 0; k < N; k += every){
-      for (const ph of [0, Math.PI]){          // keerdu ülemine ja eesmine osa
-        const t = Math.PI + 2*Math.PI*k + Math.PI + ph*0.5;
-        const xi = -l/2 + l*(k + 0.5 + ph/(4*Math.PI))/N;
-        const y = R*Math.cos(t), z = R*Math.sin(t);
-        addArrowHead(xi, y, z, 0, -Math.sin(t)*p.dS, Math.cos(t)*p.dS, 0.55, COL.cur, 0.5);
-      }
+    const every = Math.max(1, Math.round(N/6));
+    for (let k = Math.floor(((N - 1) % every)/2); k < N; k += every){   // üks nool keerdu ülemisel-eesmisel osal
+      const t = Math.PI + 2*Math.PI*k + 1.25*Math.PI;
+      const xi = -l/2 + l*(k + 0.625)/N;
+      const y = R*Math.cos(t), z = R*Math.sin(t);
+      curArrow(xi, y, z, 0, -Math.sin(t)*p.dS, Math.cos(t)*p.dS, 0.55, 0.5);
     }
     poleLabels(l/2 + 1.6);
   } else if (sc === 'force'){
@@ -862,7 +863,7 @@ function sceneObjects(){
     for (const z of [-half, half]) addTube([[0, ell, z], [xw, yw, z]], 0.06, '#475569', false);
     const P = []; for (let z = -half; z <= half + 0.001; z += 0.5) P.push([xw, yw, z]);
     addTube(P, 0.3, COL.cu, false);
-    for (const z of [-4.5, 0.6, 4.5]) addArrowHead(xw, yw, z, 0, 0, p.dF, 0.7, COL.cur, 0.6);
+    for (const z of [-4.5, 0.6, 4.5]) curArrow(xw, yw, z, 0, 0, p.dF, 0.7, 0.6);
     const zp = -half*p.dF, zm = half*p.dF;
     let q = proj(xw, yw, zp - 0.9*p.dF); prims.push({k:'badge', d:q[2] - 1, x:q[0], y:q[1], s:'+', c:'#dc2626'});
     q = proj(xw, yw, zm + 0.9*p.dF); prims.push({k:'badge', d:q[2] - 1, x:q[0], y:q[1], s:'−', c:'#2563eb'});
