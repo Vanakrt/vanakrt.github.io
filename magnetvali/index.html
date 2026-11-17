@@ -118,7 +118,10 @@
       <div class="seg two" id="segCm"><button data-v="full">väli kõikjal</button><button data-v="enter">osake siseneb välja</button></div>
       <div class="row"><label>Kiirus v <input type="range" id="rCv"></label><span id="vCv"></span></div>
       <div class="row"><label>Magnetinduktsioon B <input type="range" id="rCb"></label><span id="vCb"></span></div>
-      <div class="row" id="rowCa"><label>Nurk v ja B vahel α <input type="range" id="rCa" min="0" max="90" step="5"></label><span id="vCa"></span></div>
+      <div class="row" id="rowCa"><label>Lennusuuna nurk välja suhtes α <input type="range" id="rCa" min="0" max="180" step="5"></label><span id="vCa"></span></div>
+      <div class="small" style="margin:-4px 0 8px">α = 90°: ringjoon; muu nurga korral spiraal (α &lt; 90° välja suunas, α &gt; 90° välja vastu).</div>
+      <div class="row"><label>Energiakadu tiiru kohta <input type="range" id="rCl" min="0" max="40" step="1"></label><span id="vCl"></span></div>
+      <div class="small" style="margin:-4px 0 8px">Mullikambris kaotab osake energiat: kiirus väheneb, raadius kahaneb ja rada keerdub spiraaliks.</div>
       <div class="seg two" id="segCd"><button data-v="1">B üles ↑</button><button data-v="-1">B alla ↓</button></div>
       <div class="row"><button id="btnCplay">⏸ Paus</button><button id="btnCreset">↺ Algusesse</button></div>
       <label class="chk"><input type="checkbox" id="optCvec" checked> näita kiirust v ja jõudu F</label>
@@ -286,10 +289,10 @@ const PARTS = {
   a:{name:'alfaosake', q:2*QE, m:6.6446573e-27, v:[0.5, 5, 0.1, 2], vu:1e6, b:[0.05, 1, 0.05, 0.5], bu:1, bl:'T', bd:2}
 };
 // osakese olek: asukoht ja kiirus SI-ühikutes (m, m/s); joonisel 1 m = 100 cm
-const pc = {pt:'p', mode:'full', v:2, b:0.4, al:90, bs:1, play:true, vec:true, pos:[0, 0, 0], vel:[0, 0, 0], trail:[], wait:0, time:0};
+const pc = {pt:'p', mode:'full', v:2, b:0.4, al:90, bs:1, loss:0, play:true, vec:true, pos:[0, 0, 0], vel:[0, 0, 0], trail:[], wait:0, time:0};
 const chargeB = () => pc.b*PARTS[pc.pt].bu*pc.bs;               // B y-komponent (T)
 function chargeInfo(){
-  const P = PARTS[pc.pt], v = pc.v*P.vu, B = pc.b*P.bu, a = pc.mode === 'enter' ? 90 : pc.al;
+  const P = PARTS[pc.pt], v = pc.v*P.vu, B = pc.b*P.bu, a = pc.al;
   const vp = v*Math.sin(a*DEG), va = v*Math.cos(a*DEG), T = 2*Math.PI*P.m/(Math.abs(P.q)*B);
   return {P, v, B, a, vp, va, T, r:P.m*vp/(Math.abs(P.q)*B), F:Math.abs(P.q)*v*B*Math.sin(a*DEG), h:va*T};
 }
@@ -297,7 +300,8 @@ function chargeReset(){
   const I = chargeInfo(), Om = I.P.q*chargeB()/I.P.m;            // nurkkiirus (märgiga)
   pc.trail = []; pc.wait = 0; pc.time = 0;
   if (pc.mode === 'enter'){
-    pc.pos = [-0.10, 0, 0]; pc.vel = [I.v, 0, 0];
+    const vy = I.va*pc.bs;
+    pc.pos = [-0.10, Math.abs(vy) > 1e-9*I.v ? -0.05*Math.sign(vy) : 0, 0]; pc.vel = [I.vp, vy, 0];
   } else {
     // ringjoone keskpunkt teljel: algkiirus +x suunas, keskpunkt asub −(v⊥/Ω) z-suunas nihutatult
     const Rs = I.vp/Om, vy = I.va*pc.bs, y0 = Math.abs(vy) > 1e-9*I.v ? -0.07*Math.sign(vy) : 0;
@@ -315,6 +319,10 @@ function chargeStep(Treal){
     if (inside){
       const th = Om*dt, c = Math.cos(th), sn = Math.sin(th);
       pc.vel = [v0[0]*c - v0[2]*sn, v0[1], v0[0]*sn + v0[2]*c];
+    }
+    if (pc.loss > 0 && inside){        // energiakadu: kineetilisest energiast kaob igal tiirul osa „loss“ (kiirus väheneb eksponentsiaalselt)
+      const lam = -0.5*Math.log(1 - pc.loss)/I.T, k = Math.exp(-lam*dt);
+      pc.vel = pc.vel.map(v => v*k);
     }
     for (let k = 0; k < 3; k++) pc.pos[k] += (v0[k] + pc.vel[k])/2*dt;
   }
@@ -1209,11 +1217,13 @@ function readout(){
         <tr><td>Lorentzi jõud F = |q|vB sin α</td><td>${I.F > 0 ? fmt(I.F/10**Math.floor(Math.log10(I.F)), 2) + '·10<sup>' + minus(Math.floor(Math.log10(I.F))) + '</sup>' : '0'} N</td></tr>
         <tr><td>raadius r = mv sin α/(|q|B)</td><td>${I.r > 0 ? sp(I.r*100) + ' cm' : '– (sirge)'}</td></tr>
         <tr><td>tiiru aeg T = 2πm/(|q|B)</td><td>${I.T >= 1e-6 ? sp(I.T*1e6) + ' µs' : sp(I.T*1e9) + ' ns'}</td></tr>
-        ${pc.mode === 'full' && I.a < 90 ? `<tr><td>spiraali samm h = v cos α · T</td><td>${sp(I.h*100)} cm</td></tr>` : ''}
+        ${I.a !== 90 ? `<tr><td>spiraali samm h = v |cos α| · T</td><td>${sp(Math.abs(I.h)*100)} cm</td></tr>` : ''}
+        ${pc.loss > 0 ? (() => { const vn = Math.hypot(...pc.vel), vpn = Math.hypot(pc.vel[0], pc.vel[2]); return `<tr><td>praegu: kiirus v</td><td>${sp(vn/1e6)}·10⁶ m/s (${Math.round(100*vn/I.v)} %)</td></tr><tr><td>praegu: raadius r</td><td>${sp(I.P.m*vpn/(Math.abs(I.P.q)*I.B)*100)} cm</td></tr>`; })() : ''}
       </table>`;
-      h += pc.mode === 'enter'
+      if (pc.loss > 0) h += '<div style="margin-top:4px">Kiiruse vähenedes kahaneb raadius r = mv/(|q|B), aga tiiru aeg T ei muutu – rada keerdub sissepoole (mullikambri pilt). Mudelis kaob igal tiirul sama osa energiast (lihtsustus; päriselt sõltub energiakadu ka kiirusest).</div>';
+      h += pc.loss > 0 ? '' : pc.mode === 'enter'
         ? `<div style="margin-top:4px">Väljas teeb osake poolringi ja väljub vastassuunas; sisenemis- ja väljumiskoha vahe on 2r = ${sp(2*I.r*100)} cm. Nii eristab massispektromeeter erineva massiga osakesi.</div>`
-        : I.a === 0 ? '<div style="margin-top:4px">Kiirus on väljaga paralleelne: jõudu ei mõju, osake liigub sirgjooneliselt.</div>'
+        : I.a === 0 || I.a === 180 ? '<div style="margin-top:4px">Kiirus on väljaga paralleelne: jõudu ei mõju, osake liigub sirgjooneliselt.</div>'
         : `<div style="margin-top:4px">Jõud on alati risti kiirusega, seepärast kiiruse suurus ei muutu – muutub ainult suund.</div>`;
       h += `<div class="small" style="margin-top:4px">Aegluubis: 1 sekund ekraanil = ${tScale >= 1e-6 ? sp(tScale*1e6) + ' µs' : sp(tScale*1e9) + ' ns'} tegelikku aega.</div>`;
       break;
@@ -1289,7 +1299,7 @@ function chargeSliders(){
 function chargeLabels(){
   const P = PARTS[pc.pt];
   $('vCv').textContent = fmt(pc.v, 1) + '·10⁶ m/s'; $('vCb').textContent = fmt(pc.b, P.bd) + ' ' + P.bl; $('vCa').textContent = fmt(pc.al, 0) + '°';
-  $('rowCa').style.opacity = pc.mode === 'enter' ? 0.4 : 1; $('rCa').disabled = pc.mode === 'enter';
+  $('vCl').textContent = pc.loss > 0 ? Math.round(pc.loss*100) + ' %' : 'puudub';
 }
 const chargeChanged = () => { chargeLabels(); chargeReset(); refresh(); };
 syncSeg('segPt', pc.pt); syncSeg('segCm', pc.mode); syncSeg('segCd', pc.bs);
@@ -1298,6 +1308,7 @@ document.querySelectorAll('#segCm button').forEach(b => b.onclick = () => { pc.m
 document.querySelectorAll('#segCd button').forEach(b => b.onclick = () => { pc.bs = +b.dataset.v; syncSeg('segCd', pc.bs); chargeChanged(); });
 $('rCv').oninput = e => { pc.v = +e.target.value; chargeChanged(); };
 $('rCb').oninput = e => { pc.b = +e.target.value; chargeChanged(); };
+$('rCl').value = 0; $('rCl').oninput = e => { pc.loss = +e.target.value/100; chargeChanged(); };
 $('rCa').value = pc.al; $('rCa').oninput = e => { pc.al = +e.target.value; chargeChanged(); };
 $('btnCplay').onclick = () => { pc.play = !pc.play; $('btnCplay').textContent = pc.play ? '⏸ Paus' : '▶ Jätka'; };
 $('btnCreset').onclick = () => { chargeReset(); dirty = true; };
@@ -1424,10 +1435,12 @@ function loop(t){
       chargeStep(dt*I.T/4);                     // aegluubis: üks tiir ~4 s
       const P = pc.pos.map(v => v*100), L = pc.trail[pc.trail.length - 1];
       if (Math.hypot(P[0] - L[0], P[1] - L[1], P[2] - L[2]) > 0.08) pc.trail.push(P);
-      if (pc.trail.length > 4000) pc.trail.splice(0, pc.trail.length - 4000);
+      const cap = pc.loss > 0 ? 20000 : 4000;
+      if (pc.trail.length > cap) pc.trail.splice(0, pc.trail.length - cap);
+      if (pc.loss > 0 && Math.hypot(...pc.vel) < 0.03*I.v) pc.wait = 2.5;          // peaaegu peatunud: alusta uuesti
       // väljus vaatealast → alusta mõne aja pärast uuesti
       if (Math.abs(P[0]) > 16 || Math.abs(P[1]) > 9 || Math.abs(P[2]) > 15) pc.wait = 1.2;
-      if (pc.mode === 'full' && I.a === 90 && pc.time > 3*I.T) pc.trail.splice(0, Math.max(0, pc.trail.length - 1500));
+      if (pc.mode === 'full' && I.a === 90 && pc.loss === 0 && pc.time > 3*I.T) pc.trail.splice(0, Math.max(0, pc.trail.length - 1500));
     }
     dirty = true;
   }
