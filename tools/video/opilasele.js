@@ -47,9 +47,9 @@ module.exports = {scenes:[
   {name:'kaugus', speech:'s7', caption:'B = μ₀I / (2πr): 5 A korral 2 cm kaugusel 50 µT, 4 cm kaugusel 25 µT.', run:async a => {
     await a.click('#segView button[data-v="top"]');
     await a.js(() => { __mv.compasses.wire.length = 0; });
-    await a.hoverWorld([2, 0, 0], 1.2);
+    await a.hoverWorld([-2, 0, 0], 1.2);
     await a.wait(3.5);
-    await a.hoverWorld([4, 0, 0], 1.2);
+    await a.hoverWorld([-4, 0, 0], 1.2);
     await a.wait(2);
   }},
   {name:'solenoid', speech:'s8', caption:'Solenoidi sees on väli peaaegu homogeenne – solenoid käitub nagu pulkmagnet.', run:async a => {
