@@ -137,7 +137,7 @@
       <div class="seg two" id="segCd"><button data-v="1">B üles ↑</button><button data-v="-1">B alla ↓</button></div>
       <div class="row"><button id="btnCplay">⏸ Paus</button><button id="btnCreset">↺ Algusesse</button></div>
       <label class="chk"><input type="checkbox" id="optCvec" checked> näita kiirust v ja jõudu F</label>
-      <div class="small">Liikumist näidatakse aegluubis (üks tiir umbes 4 sekundiga).</div>
+      <div class="small">Liikumist näidatakse aegluubis (vaikeväärtuste korral üks tiir umbes 4 sekundiga). Aegluubi tegur sõltub ainult osakese liigist, nii et v ja B muutmine mõjub liikumisele nagu päriselt: kiirus ekraanil on võrdeline v-ga ja tiiru aeg pöördvõrdeline B-ga.</div>
     </div>
     <div class="set" id="setForce">
       <div class="row"><button id="btnOn">Vool: sees</button><button id="btnFlipF">⇄ Pööra magnet</button></div>
@@ -307,7 +307,9 @@ const chargeB = () => pc.b*PARTS[pc.pt].bu*pc.bs;               // B y-komponent
 function chargeInfo(){
   const P = PARTS[pc.pt], v = pc.v*P.vu, B = pc.b*P.bu, a = pc.al;
   const vp = v*Math.sin(a*DEG), va = v*Math.cos(a*DEG), T = 2*Math.PI*P.m/(Math.abs(P.q)*B);
-  return {P, v, B, a, vp, va, T, r:P.m*vp/(Math.abs(P.q)*B), F:Math.abs(P.q)*v*B*Math.sin(a*DEG), h:va*T};
+  // aegluubi tegur sõltub ainult osakese liigist (vaike-B korral tiir ~4 s), mitte B ega v väärtusest – muidu muutuks B muutmisel näiline kiirus
+  const kt = 2*Math.PI*P.m/(Math.abs(P.q)*P.b[3]*P.bu)/4;
+  return {P, v, B, a, vp, va, T, kt, r:P.m*vp/(Math.abs(P.q)*B), F:Math.abs(P.q)*v*B*Math.sin(a*DEG), h:va*T};
 }
 function chargeReset(){
   const I = chargeInfo(), Om = I.P.q*chargeB()/I.P.m;            // nurkkiirus (märgiga)
@@ -1412,7 +1414,7 @@ function readout(){
     }
     case 'charge': {
       const I = chargeInfo(), sp = v => sig3(v);
-      const tScale = I.T/4;
+      const tScale = I.kt;
       h += `<table>
         <tr><td>${I.P.name}: laeng q</td><td>${I.P.q > 0 ? '+' : '−'}${Math.round(Math.abs(I.P.q)/QE)}e</td></tr>
         <tr><td>mass m</td><td>${fmt(I.P.m/10**Math.floor(Math.log10(I.P.m)), 2)}·10<sup>${minus(Math.floor(Math.log10(I.P.m)))}</sup> kg</td></tr>
@@ -1658,7 +1660,7 @@ function loop(t){
     const I = chargeInfo();
     if (pc.wait > 0){ pc.wait -= dt; if (pc.wait <= 0) chargeReset(); }
     else {
-      chargeStep(dt*I.T/4);                     // aegluubis: üks tiir ~4 s
+      chargeStep(dt*I.kt);                      // aegluubis (tegur sõltub ainult osakese liigist)
       const P = pc.pos.map(v => v*100), L = pc.trail[pc.trail.length - 1];
       if (Math.hypot(P[0] - L[0], P[1] - L[1], P[2] - L[2]) > 0.08) pc.trail.push(P);
       const cap = pc.loss > 0 ? 20000 : 4000;
