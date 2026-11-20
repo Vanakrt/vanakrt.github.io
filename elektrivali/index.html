@@ -68,6 +68,37 @@
   #vmodal .vtop{display:flex;justify-content:space-between;align-items:center;color:#fff;font-size:14px;margin-bottom:8px;gap:12px}
   #vmodal .vtop button{flex-shrink:0;white-space:nowrap;background:#fff;color:#1f2937;border:0;border-radius:6px;padding:6px 12px;font-size:14px;cursor:pointer}
   #vmodal video{display:block;width:100%;max-height:82vh;background:#000;border-radius:10px}
+  /* töölehe joonis */
+  #xopen{width:100%;padding:8px 10px;font-weight:600}
+  #xmodal{position:fixed;inset:0;z-index:1000;background:rgba(15,23,42,.6);display:none;align-items:center;justify-content:center;padding:16px}
+  #xmodal.on{display:flex}
+  #xmodal .xbox{background:#fff;border-radius:12px;width:min(1180px,100%);max-height:94vh;display:flex;flex-direction:column;overflow:hidden}
+  #xmodal .xtop{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);gap:12px}
+  #xmodal .xtop b{font-size:16px}
+  #xmodal .xbody{display:flex;gap:16px;padding:14px;overflow:auto;min-height:0}
+  #xmodal .xprev{flex:1;min-width:0;display:flex;align-items:flex-start;justify-content:center;background:#f1f5f9;border-radius:8px;padding:10px}
+  #xmodal .xprev img{max-width:100%;max-height:72vh;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.18);cursor:crosshair}
+  #xmodal .xopts{width:290px;flex:none}
+  #xmodal .xopts h2:first-child{margin-top:0}
+  #xmodal .xbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  #xmodal .xbtns button{padding:8px 12px;font-weight:600}
+  #xmodal .xbtns .main{background:#1f2937;color:#fff;border-color:#1f2937}
+  #xmsg{font-size:12.5px;margin-top:8px;min-height:1.2em}
+  #xmsg.err{color:#b91c1c}
+  #xmsg.ok{color:#15803d}
+  #xsize.warn{color:#b45309}
+  @media (max-width:760px){
+    #xmodal{padding:0}
+    #xmodal .xbox{max-height:100vh;height:100%;border-radius:0}
+    #xmodal .xbody{flex-direction:column}
+    #xmodal .xopts{width:auto}
+    #xmodal .xprev img{max-height:40vh}
+  }
+  #xvecRow button{padding:3px 9px}
+  #xmodal .types{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  #xmodal .types button{padding:8px 6px;font-weight:600}
+  #xmodal .types button.on{background:#1f2937;color:#fff;border-color:#1f2937}
+  #xmodal .row select{width:100%}
 </style>
 </head>
 <body>
@@ -173,6 +204,10 @@
     <div class="small" id="scaleExpl" style="margin:-2px 0 10px"></div>
     <div class="row"><button id="clearLines">Kustuta minu joonistatud jõujooned</button></div>
 
+    <h2>Töölehele</h2>
+    <button type="button" id="xopen">Joonis töölehele (PNG)…</button>
+    <div class="small" style="margin-top:4px">Prinditav joonis kontrolltöösse või töölehele: jõujoonte joonistamine, laengute märkide määramine või väljatugevus punktis – ülesanne ja lahendus.</div>
+
     <h2>Väli kursori kohas</h2>
     <div id="readout"><div class="small">Vii kursor joonisele.</div></div>
 
@@ -186,6 +221,7 @@
       • <b>Tasand</b> on joonise tasandiga risti olev ühtlaselt laetud plaat, mis on joonisega risti suunas väga pikk; joonisel paistab see lõiguna. Lõpmatu tasandi lähedal E = σ/(2ε₀); kahe vastasmärgilise tasandi vahel on väli peaaegu homogeenne ja E ≈ σ/ε₀, kui tasandid on vahekaugusest palju pikemad (L ≫ d); servade juures on väli mittehomogeenne.<br>
       • Ekvipotentsiaalpinnad paistavad joontena; naaberjoonte potentsiaalide vahe on ΔV. Punased toonid = positiivne potentsiaal, sinised = negatiivne, kriipsjoon = φ = 0. Ekvipotentsiaalid on risti jõujoontega.<br>
       • Valemid: punktlaeng E = k|q|/r², φ = kq/r (φ = 0 lõpmatuses), k = 8,99·10⁹ N·m²/C², ε₀ = 1/(4πk). Joonisega risti lõpmatult pika tasandi potentsiaal lõpmatuses nulli ei lähe, seetõttu on tasandite potentsiaali nulltase valitud 10 m kaugusele. Vastasmärgiliste võrdsete tasandite korral see valik tulemust ei mõjuta.<br>
+      • <b>Joonis töölehele</b>: prinditav pilt praegustest laengutest. Ülesande tüübid: „Joonista jõujooned“ (jooned peidus), „Määra laengute märgid“ (laengud tühjade ringidena, jõujoontel nooli pole), „Väljatugevus punktis P“ (punkti P valid eelvaatel klõpsates; lahendusel E<sub>i</sub> ja E vektorite mõõtkavas). Ülesande ja lahenduse joonis on sama raamiga; joonise all on 1 m mõõtlõik ja vektorite mõõtkava.<br>
       • Mõõtkava: 1 ruut = 0,5 m.
     </div>
   </aside>
@@ -195,6 +231,55 @@
     <button id="touchMode" style="display:none;position:absolute;right:8px;bottom:8px;z-index:3;background:#1f2937;color:#fff;border-color:#1f2937;font-size:14px"></button>
     <div id="scale">1 ruut = 0,5 m</div>
   </main>
+</div>
+<div id="xmodal" role="dialog" aria-modal="true" aria-label="Joonis töölehele">
+  <div class="xbox">
+    <div class="xtop"><b>Joonis töölehele</b><button type="button" id="xclose">✕ Sulge</button></div>
+    <div class="xbody">
+      <div class="xprev"><img id="xprev" alt="Joonise eelvaade"></div>
+      <div class="xopts">
+        <h2>Ülesande tüüp</h2>
+        <div class="row"><select id="xtype">
+          <option value="lines">Joonista jõujooned</option>
+          <option value="signs">Määra laengute märgid</option>
+          <option value="vec">Väljatugevus punktis P</option>
+        </select></div>
+        <div class="types" id="xpresets">
+          <button type="button" data-p="task">Ülesanne</button>
+          <button type="button" data-p="sol">Lahendus</button>
+        </div>
+        <h2>Mida joonisel näidata</h2>
+        <label class="chk"><input type="checkbox" data-x="lines"> jõujooned</label>
+        <label class="chk" style="margin-left:22px"><input type="checkbox" data-x="arrows"> suunanooled jõujoontel</label>
+        <label class="chk"><input type="checkbox" data-x="signs"> laengute märgid (+ / −)</label>
+        <label class="chk"><input type="checkbox" data-x="names"> laengute nimed (q₁, T₁ …)</label>
+        <label class="chk"><input type="checkbox" data-x="equi"> ekvipotentsiaalpinnad (jooned)</label>
+        <label class="chk"><input type="checkbox" data-x="P"> punkt P</label>
+        <label class="chk" style="margin-left:22px"><input type="checkbox" data-x="vec"> väljatugevuse vektorid punktis P</label>
+        <label class="chk"><input type="checkbox" data-x="grid"> ruudustik (0,5 m)</label>
+        <div class="small" id="xpHint">Punkti P valimiseks klõpsa eelvaatel. <span id="xpPos"></span></div>
+        <div class="row" id="xvecRow" style="margin-top:6px">
+          <span class="small">Vektorid:</span>
+          <button type="button" id="xvecShorter" title="Lühemad vektorid">−</button>
+          <button type="button" id="xvecLonger" title="Pikemad vektorid">+</button>
+          <span class="small" id="xvecVal"></span>
+        </div>
+        <div class="row"><label>Jõujoonte tihedus <input type="range" id="xdens" min="4" max="32" step="1"></label> <span class="small" id="xdensVal"></span></div>
+        <h2>Välimus</h2>
+        <div class="row"><label>Värvid
+          <select id="xmono"><option value="1" selected>mustvalge</option><option value="0">värviline</option></select></label></div>
+        <div class="row"><label>Paberil 1 m =
+          <select id="xcm"><option value="5">5 cm</option><option value="4">4 cm</option><option value="3">3 cm</option><option value="2.5">2,5 cm</option><option value="2">2 cm</option><option value="1.5">1,5 cm</option><option value="1">1 cm</option></select></label></div>
+        <div class="small" id="xsize"></div>
+        <div class="xbtns">
+          <button type="button" class="main" id="xdown">⬇ Laadi alla PNG</button>
+          <button type="button" id="xcopy">Kopeeri</button>
+        </div>
+        <div id="xmsg"></div>
+        <div class="small" style="margin-top:8px">Joonise all on 1 m mõõtlõik (ja vektorite mõõtkava). Allalaaditud pilt on 300 dpi ja läheb Wordi õiges suuruses. Kopeeritud pildi suurust võib dokument muuta – kui mõõtmine on oluline, kasuta allalaadimist.</div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -217,6 +302,9 @@ const layer = document.createElement('canvas'), lctx = layer.getContext('2d');
 const $ = id => document.getElementById(id);
 
 let W = 0, H = 0, DPR = 1;
+// Töölehe joonise eksport: null = ekraan; muidu {ox, oy} – koordinaatide alguspunkti asukoht ekspordilõuendil
+let EXP = null;
+const OX = () => EXP ? EXP.ox : W/2, OY = () => EXP ? EXP.oy : H/2;
 // items: {type:'point', q (μC), x, y} või {type:'plane', s (μC/m²), x1, y1, x2, y2}; koordinaadid meetrites, null = paigutamata
 let items = [];
 let seeds = [];            // kasutaja klõpsud [x,y] meetrites
@@ -259,8 +347,8 @@ function fmtCharge(it){
   const v = chargeOf(it);
   return (v > 0 ? '+' : '−') + fmtNum(v) + (it.type === 'point' ? ' μC' : ' μC/m²');
 }
-function toPx(x, y){ return [W/2 + x*PPM, H/2 - y*PPM]; }
-function toWorld(px, py){ return [(px - W/2)/PPM, (H/2 - py)/PPM]; }
+function toPx(x, y){ return [OX() + x*PPM, OY() - y*PPM]; }
+function toWorld(px, py){ return [(px - OX())/PPM, (OY() - py)/PPM]; }
 function snap(v){ return opts.snap ? Math.round(v/SNAP_M)*SNAP_M : v; }
 function num(id, def){ const v = parseFloat(String($(id).value).replace(',', '.')); return isFinite(v) && v > 0 ? v : def; }
 const isPlaced = it => it.type === 'point' ? it.x !== null : it.x2 !== null;
@@ -556,6 +644,7 @@ function drawFieldLine(g, pts, color, width, spacing, P){
   g.beginPath(); g.moveTo(pts[0][0], pts[0][1]);
   for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
   g.stroke();
+  if (!spacing) return;            // töölehel saab nooled ära jätta
   let L = 0;
   for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i][0]-pts[i-1][0], pts[i][1]-pts[i-1][1]);
   let next = L < spacing ? L/2 : spacing/2, acc = 0;
@@ -579,13 +668,13 @@ function drawGrid(g){
   g.lineWidth = 1;
   g.strokeStyle = 'rgba(15,23,42,0.07)';
   g.beginPath();
-  for (let x = W/2 % step; x < W; x += step){ g.moveTo(Math.round(x)+.5, 0); g.lineTo(Math.round(x)+.5, H); }
-  for (let y = H/2 % step; y < H; y += step){ g.moveTo(0, Math.round(y)+.5); g.lineTo(W, Math.round(y)+.5); }
+  for (let x = OX() % step; x < W; x += step){ g.moveTo(Math.round(x)+.5, 0); g.lineTo(Math.round(x)+.5, H); }
+  for (let y = OY() % step; y < H; y += step){ g.moveTo(0, Math.round(y)+.5); g.lineTo(W, Math.round(y)+.5); }
   g.stroke();
   g.strokeStyle = 'rgba(15,23,42,0.17)';
   g.beginPath();
-  g.moveTo(Math.round(W/2)+.5, 0); g.lineTo(Math.round(W/2)+.5, H);
-  g.moveTo(0, Math.round(H/2)+.5); g.lineTo(W, Math.round(H/2)+.5);
+  g.moveTo(Math.round(OX())+.5, 0); g.lineTo(Math.round(OX())+.5, H);
+  g.moveTo(0, Math.round(OY())+.5); g.lineTo(W, Math.round(OY())+.5);
   g.stroke();
 }
 function drawVectorGrid(g, P){
@@ -1036,7 +1125,391 @@ if (/github\.io$/.test(location.hostname)) $('back').style.display = 'block';
 items = [{type:'point', q: 1, x: -1.5, y: 0}, {type:'point', q: -1, x: 1.5, y: 0}];
 renderList();
 resize();
-window.__fe = {fieldOne, fieldAt, potOne, potAt, placedPx, toPx, preset, items: () => items, autoLines: () => autoLines, userLines: () => userLines, eqStep: () => eqStep, K, PPM};
+/* ---------- joonis töölehele (PNG eksport) ---------- */
+const EXP_K = 2.75;                    // seadme pikslit CSS-piksli kohta: 13 px kiri ≈ 3 mm
+const DPI = 300, PX_CM = DPI / 2.54;   // pikslit paberi sentimeetri kohta
+const MAX_PX = 16e6;                   // telefonibrauserite lõuendi pindala piir (iOS)
+const CAP_LINE = 20;                   // allkirjarea kõrgus (CSS px)
+const xo = {type:'lines', lines:false, arrows:true, signs:true, names:true, equi:false, P:false, vec:false, grid:false,
+            mono:true, cm:2, density:16, pt:null, vcm:1000};
+const XTYPES = {
+  lines: {name:'Jõujooned', file:'joujooned',
+          task:{lines:false, arrows:true, signs:true, P:false, vec:false},
+          sol: {lines:true,  arrows:true, signs:true, P:false, vec:false}},
+  signs: {name:'Laengute märgid', file:'margid',
+          task:{lines:true, arrows:false, signs:false, P:false, vec:false},
+          sol: {lines:true, arrows:true,  signs:true,  P:false, vec:false}},
+  vec:   {name:'Väljatugevus punktis P', file:'valjatugevus',
+          task:{lines:false, signs:true, P:true, vec:false, grid:true},
+          sol: {lines:false, signs:true, P:true, vec:true,  grid:true}},
+};
+// Töölehe raam (m): laengud + 1,25 m varu (vähemalt 4 m × 3 m); sõltub ainult laengutest ja punktist P,
+// mitte sellest, mis on näha – ülesande ja lahenduse joonis on sama suuruse ja asendiga.
+function exportFrame(opt){
+  const ppm = PX_CM * opt.cm / EXP_K;          // CSS px meetri kohta
+  const xs = [], ys = [];
+  for (const it of items){
+    if (!isPlaced(it)) continue;
+    if (it.type === 'point'){ xs.push(it.x); ys.push(it.y); }
+    else { xs.push(it.x1, it.x2); ys.push(it.y1, it.y2); }
+  }
+  const m = 1.25;
+  let vx = [], vy = [];
+  if (opt.P && opt.pt){
+    xs.push(opt.pt[0]); ys.push(opt.pt[1]);
+    // vektorite otspunktid (ka ülesandel, et raam oleks sama): paberil |E|/vcm cm = |E|/vcm/cm meetrit
+    const {P, x, y, comps} = fieldAtWorld(opt.pt);
+    if (P.length && P.every(o => objDist(o, x, y) >= 2)){
+      const f2m = 1 / (opt.vcm * opt.cm);
+      const sum = comps.reduce((a, f) => [a[0] + f[0], a[1] + f[1]], [0, 0]);
+      for (const f of comps.concat([sum])) if (isFinite(f[0]) && isFinite(f[1])){ vx.push(opt.pt[0] + f[0]*f2m); vy.push(opt.pt[1] - f[1]*f2m); }
+    }
+  }
+  if (!xs.length){ xs.push(0); ys.push(0); }
+  let x0 = Math.min(...xs) - m, x1 = Math.max(...xs) + m, y0 = Math.min(...ys) - m, y1 = Math.max(...ys) + m;
+  if (x1 - x0 < 4){ const c = (x0 + x1)/2; x0 = c - 2; x1 = c + 2; }
+  if (y1 - y0 < 3){ const c = (y0 + y1)/2; y0 = c - 1.5; y1 = c + 1.5; }
+  const vm = 0.45;                               // varu vektori sildile
+  if (vx.length){ x0 = Math.min(x0, Math.min(...vx) - vm); x1 = Math.max(x1, Math.max(...vx) + vm); y0 = Math.min(y0, Math.min(...vy) - vm); y1 = Math.max(y1, Math.max(...vy) + vm); }
+  const caps = captionLines(opt).length;
+  const Wc = Math.ceil((x1 - x0) * ppm), Hfig = Math.ceil((y1 - y0) * ppm), Hc = Hfig + caps * CAP_LINE + (caps ? 8 : 0);
+  const dw = Math.round(Wc * EXP_K), dh = Math.round(Hc * EXP_K);
+  return {ppm, Wc, Hc, Hfig, ox: -x0 * ppm, oy: y1 * ppm, x0, y1,
+          wcm: dw / PX_CM, hcm: dh / PX_CM, tooBig: dw * dh > MAX_PX};
+}
+function captionLines(opt){
+  const out = ['bar'];                                     // 1 m mõõtlõik on alati
+  if (opt.grid) out.push('1 ruut = 0,5 m');
+  if (opt.P) out.push('Vektorite mõõtkava: 1 cm ≙ ' + fmtE(opt.vcm));    // ka ülesandel: õpilane joonistab vektorid mõõtkavas
+  return out;
+}
+// Vaikimisi punkt P: laengute keskpunktist 1 m üles (või alla/kõrvale), vähemalt 0,5 m kõigist laengutest
+function defaultPoint(){
+  const pl = items.filter(isPlaced);
+  if (!pl.length) return [0, 1];
+  let cx = 0, cy = 0;
+  for (const it of pl){ if (it.type === 'point'){ cx += it.x; cy += it.y; } else { cx += (it.x1 + it.x2)/2; cy += (it.y1 + it.y2)/2; } }
+  cx /= pl.length; cy /= pl.length;
+  const clear = (x, y) => pl.every(it => it.type === 'point' ? Math.hypot(x - it.x, y - it.y) >= 0.5
+    : distSegW(x, y, it) >= 0.5);
+  for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [0, 2], [0, 0]]){
+    const x = Math.round((cx + dx)*4)/4, y = Math.round((cy + dy)*4)/4;
+    if (clear(x, y)) return [x, y];
+  }
+  return [Math.round(cx*4)/4, Math.round((cy + 1)*4)/4];
+}
+function distSegW(x, y, it){
+  const dx = it.x2 - it.x1, dy = it.y2 - it.y1, L2 = dx*dx + dy*dy;
+  const t = L2 ? Math.max(0, Math.min(1, ((x - it.x1)*dx + (y - it.y1)*dy) / L2)) : 0;
+  return Math.hypot(x - it.x1 - dx*t, y - it.y1 - dy*t);
+}
+// Vektorite vaikemõõtkava: summaarne E umbes 3 cm pikk; väärtused 1–2–5 reas
+const niceUp = v => { const e = Math.floor(Math.log10(v)), f = v / Math.pow(10, e); return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * Math.pow(10, e); };
+function stepNice(v, dir){
+  const e = Math.floor(Math.log10(v) + 1e-9), f = Math.round(v / Math.pow(10, e));
+  const seq = [1, 2, 5], i = seq.indexOf(f) < 0 ? 0 : seq.indexOf(f);
+  const j = i + dir;
+  if (j > 2) return Math.pow(10, e + 1);
+  if (j < 0) return 5 * Math.pow(10, e - 1);
+  return seq[j] * Math.pow(10, e);
+}
+function fieldAtWorld(pt){
+  const P = placedPx(), [x, y] = toPx(pt[0], pt[1]);
+  return {P, x, y, comps: P.map(o => fieldOne(o, x, y))};
+}
+function defaultVcm(pt){
+  const {comps} = fieldAtWorld(pt);
+  const sum = comps.reduce((a, f) => [a[0] + f[0], a[1] + f[1]], [0, 0]);
+  let m = Math.hypot(sum[0], sum[1]);
+  if (!(m > 0) || !isFinite(m)) m = Math.max(0, ...comps.map(f => Math.hypot(f[0], f[1])).filter(isFinite));
+  return m > 0 ? niceUp(m / 3) : 1000;
+}
+function drawChargeX(g, o, opt){
+  const r = CHARGE_R;
+  g.save();
+  g.beginPath(); g.arc(o.x, o.y, r, 0, 2*Math.PI);
+  if (opt.signs){
+    g.fillStyle = o.q > 0 ? '#dc2626' : '#2563eb'; g.fill();
+    g.strokeStyle = '#fff'; g.lineWidth = 2.4; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(o.x - 6, o.y); g.lineTo(o.x + 6, o.y);
+    if (o.q > 0){ g.moveTo(o.x, o.y - 6); g.lineTo(o.x, o.y + 6); }
+    g.stroke();
+  } else {
+    g.fillStyle = '#fff'; g.fill(); g.strokeStyle = '#1f2937'; g.lineWidth = 1.6; g.stroke();   // tühi ring: õpilane kirjutab märgi
+  }
+  if (opt.names){
+    g.font = '600 12px system-ui, sans-serif'; g.fillStyle = colorOf(o.idx); g.textAlign = 'left'; g.textBaseline = 'top';
+    g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,.9)';
+    g.strokeText('q' + sub(o.idx + 1), o.x + r + 2, o.y + r - 4); g.fillText('q' + sub(o.idx + 1), o.x + r + 2, o.y + r - 4);
+  }
+  g.restore();
+}
+function drawPlaneX(g, o, opt){
+  g.save(); g.lineCap = 'butt';
+  if (opt.signs){
+    g.strokeStyle = o.s > 0 ? '#dc2626' : '#2563eb'; g.lineWidth = 8;
+    g.beginPath(); g.moveTo(o.ax, o.ay); g.lineTo(o.bx, o.by); g.stroke();
+    g.strokeStyle = '#fff'; g.lineWidth = 1.6;
+    const n = Math.max(1, Math.floor(o.Lpx / 28));
+    g.beginPath();
+    for (let k = 0; k < n; k++){
+      const t = (k + 0.5) / n, cx = o.ax + (o.bx - o.ax)*t, cy = o.ay + (o.by - o.ay)*t;
+      g.moveTo(cx - o.ux*2.6, cy - o.uy*2.6); g.lineTo(cx + o.ux*2.6, cy + o.uy*2.6);
+      if (o.s > 0){ g.moveTo(cx + o.uy*2.6, cy - o.ux*2.6); g.lineTo(cx - o.uy*2.6, cy + o.ux*2.6); }
+    }
+    g.stroke();
+  } else {
+    g.strokeStyle = '#1f2937'; g.lineWidth = 10;
+    g.beginPath(); g.moveTo(o.ax, o.ay); g.lineTo(o.bx, o.by); g.stroke();
+    g.strokeStyle = '#fff'; g.lineWidth = 7;
+    g.beginPath(); g.moveTo(o.ax, o.ay); g.lineTo(o.bx, o.by); g.stroke();
+  }
+  if (opt.names){
+    let nx = -o.uy, ny = o.ux; if (ny > 0 || (ny === 0 && nx < 0)){ nx = -nx; ny = -ny; }
+    const lx = (o.ax + o.bx)/2 + nx*16, ly = (o.ay + o.by)/2 + ny*16;
+    g.font = '600 12px system-ui, sans-serif'; g.fillStyle = colorOf(o.idx); g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,.9)';
+    g.strokeText('T' + sub(o.idx + 1), lx, ly); g.fillText('T' + sub(o.idx + 1), lx, ly);
+  }
+  g.restore();
+}
+// Punkt P ja (lahendusel) väljatugevuse vektorid töölehe mõõtkavas
+function drawPointX(g, opt){
+  const {P, x, y, comps} = fieldAtWorld(opt.pt);
+  const onCharge = P.some(o => objDist(o, x, y) < 2);
+  if (opt.vec && P.length && !onCharge){
+    const s = (PX_CM / EXP_K) / opt.vcm;     // CSS px (N/C) kohta: 1 cm paberil = vcm
+    const sum = comps.reduce((a, f) => [a[0] + f[0], a[1] + f[1]], [0, 0]);
+    if (P.length > 1){
+      comps.forEach((f, i) => drawArrow(g, x, y, x + f[0]*s, y + f[1]*s, colorOf(P[i].idx), 2, false));
+      if (opts.chain){
+        let cx = x + comps[0][0]*s, cy = y + comps[0][1]*s;
+        for (let i = 1; i < comps.length; i++){
+          const nx = cx + comps[i][0]*s, ny = cy + comps[i][1]*s;
+          drawArrow(g, cx, cy, nx, ny, colorOf(P[i].idx), 1.4, true); cx = nx; cy = ny;
+        }
+      }
+      comps.forEach((f, i) => {
+        const m = Math.hypot(f[0], f[1]), L = m*s; if (L < 18) return;
+        const ux = f[0]/m, uy = f[1]/m, tx = x + f[0]*s, ty = y + f[1]*s;
+        label(g, 'E' + sub(P[i].idx + 1), tx + ux*12 - uy*10, ty + uy*12 + ux*10, colorOf(P[i].idx));
+      });
+    }
+    const ms = Math.hypot(sum[0], sum[1]);
+    drawArrow(g, x, y, x + sum[0]*s, y + sum[1]*s, '#111827', 3.2, false);
+    if (ms*s > 14) label(g, 'E', x + sum[0]*s + sum[0]/ms*14, y + sum[1]*s + sum[1]/ms*14, '#111827');
+  }
+  g.save(); g.fillStyle = '#111827'; g.beginPath(); g.arc(x, y, 3.5, 0, 2*Math.PI); g.fill(); g.restore();
+  label(g, 'P', x - 11, y - 12, '#111827');
+}
+function drawCaptions(g, opt, fr){
+  const caps = captionLines(opt);
+  g.save();
+  g.fillStyle = '#fff'; g.fillRect(0, fr.Hfig, fr.Wc, fr.Hc - fr.Hfig);      // valge allkirjariba (jooned ei ulatu sinna)
+  g.strokeStyle = '#9ca3af'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(0, fr.Hfig + .5); g.lineTo(fr.Wc, fr.Hfig + .5); g.stroke();
+  g.font = '12px system-ui, sans-serif'; g.fillStyle = '#1f2937'; g.textBaseline = 'middle'; g.textAlign = 'left';
+  caps.forEach((c, i) => {
+    const y = fr.Hfig + 4 + CAP_LINE*(i + 0.5), x = 10;
+    if (c === 'bar'){
+      const L = PPM;                                         // 1 m
+      g.strokeStyle = '#1f2937'; g.lineWidth = 1.4; g.beginPath();
+      g.moveTo(x, y); g.lineTo(x + L, y); g.moveTo(x, y - 4); g.lineTo(x, y + 4); g.moveTo(x + L, y - 4); g.lineTo(x + L, y + 4); g.stroke();
+      g.fillText('1 m', x + L + 8, y);
+    } else g.fillText(c, x, y);
+  });
+  g.restore();
+}
+// Töölehe ruudustik: tugevam kui ekraanil, et prinditult näha oleks (0,5 m ruudud, teljed tumedamad)
+function drawGridX(g){
+  const step = GRID_M*PPM;
+  g.save(); g.lineWidth = 0.6;
+  g.strokeStyle = 'rgba(0,0,0,0.3)'; g.beginPath();
+  for (let x = OX() % step; x < W; x += step){ g.moveTo(x, 0); g.lineTo(x, H); }
+  for (let y = OY() % step; y < H; y += step){ g.moveTo(0, y); g.lineTo(W, y); }
+  g.stroke();
+  g.strokeStyle = 'rgba(0,0,0,0.55)'; g.lineWidth = 0.9; g.beginPath();
+  g.moveTo(OX(), 0); g.lineTo(OX(), H); g.moveTo(0, OY()); g.lineTo(W, OY());
+  g.stroke(); g.restore();
+}
+function drawExport(g, opt, fr){
+  g.setTransform(EXP_K, 0, 0, EXP_K, 0, 0);
+  g.fillStyle = '#fff'; g.fillRect(0, 0, W, H);
+  const P = placedPx();
+  if (opt.equi && P.length){
+    const keep = opts.equiFill; opts.equiFill = false;      // töölehel ainult jooned, värvitäiteta
+    try { drawEquipotentials(g, P); } finally { opts.equiFill = keep; }
+  }
+  if (opt.grid) drawGridX(g);
+  if (opt.lines){
+    for (const l of autoLines) drawFieldLine(g, l, AUTO_COLOR, 1.3, opt.arrows ? 110 : 0, P);
+    for (const l of userLines) drawFieldLine(g, l, USER_COLOR, 2.2, opt.arrows ? 120 : 0, P);
+  }
+  for (const o of P) if (o.kind === 's') drawPlaneX(g, o, opt);
+  for (const o of P) if (o.kind === 'p') drawChargeX(g, o, opt);
+  if (opt.P && opt.pt) drawPointX(g, opt);
+  drawCaptions(g, opt, fr);
+}
+// Mustvalge: iga värv → must, hall või helehall (heledus järgi); läbipaistvad täited jäävad heledaks halliks
+function mono(v){
+  if (typeof v !== 'string') return v;
+  let r, g, b, a = 1, m;
+  if (v[0] === '#'){
+    let h = v.slice(1); if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    r = parseInt(h.slice(0, 2), 16); g = parseInt(h.slice(2, 4), 16); b = parseInt(h.slice(4, 6), 16);
+  } else if ((m = v.match(/rgba?\(([^)]+)\)/))){
+    const q = m[1].split(',').map(parseFloat); [r, g, b] = q; if (q.length > 3) a = q[3];
+  } else return v;
+  if (r >= 250 && g >= 250 && b >= 250) return v;
+  if (a < 0.3) return `rgba(0,0,0,${(a * 0.7).toFixed(3)})`;
+  const L = (0.2126*r + 0.7152*g + 0.0722*b) / 255;
+  const k = L > 0.8 ? 238 : (L > 0.6 ? 140 : 0);
+  return a < 1 ? `rgba(${k},${k},${k},${a})` : `rgb(${k},${k},${k})`;
+}
+function monoCtx(c){
+  for (const p of ['strokeStyle', 'fillStyle']){
+    const d = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, p);
+    Object.defineProperty(c, p, {configurable: true, get(){ return d.get.call(c); }, set(v){ d.set.call(c, mono(v)); }});
+  }
+}
+// Joonistab töölehe joonise eraldi lõuendile; jõujooned arvutatakse ekspordi mõõtkavas uuesti, ekraani olek taastatakse
+function renderExport(opt){
+  const fr = exportFrame(opt);
+  if (fr.tooBig) return {fr, canvas: null};
+  const keep = {W, H, PPM, DPR, density: opts.density};
+  const c = document.createElement('canvas');
+  c.width = Math.round(fr.Wc * EXP_K); c.height = Math.round(fr.Hc * EXP_K);
+  const g = c.getContext('2d'); if (opt.mono) monoCtx(g);
+  try {
+    W = fr.Wc; H = fr.Hfig; PPM = fr.ppm; DPR = EXP_K; opts.density = opt.density;
+    EXP = {ox: fr.ox, oy: fr.oy};
+    computeLines();
+    drawExport(g, opt, fr);
+  } finally {
+    EXP = null; ({W, H, PPM, DPR} = keep); opts.density = keep.density;
+    linesDirty = true; draw();
+  }
+  return {fr, canvas: c};
+}
+// PNG-le füüsilise suuruse märge (pHYs, 300 dpi), et Word paneks pildi mõõtkava järgi õiges suuruses
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++){ let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(u8){ let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC_T[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+async function withDpi(blob, dpi){
+  const src = new Uint8Array(await blob.arrayBuffer()), sv = new DataView(src.buffer);
+  const ppm = Math.round(dpi / 0.0254);
+  const ch = new Uint8Array(21), cv2 = new DataView(ch.buffer);
+  cv2.setUint32(0, 9); ch.set([112, 72, 89, 115], 4); cv2.setUint32(8, ppm); cv2.setUint32(12, ppm); ch[16] = 1;
+  cv2.setUint32(17, crc32(ch.subarray(4, 17)));
+  const out = [src.subarray(0, 8)];
+  for (let p = 8; p + 12 <= src.length; ){
+    const len = sv.getUint32(p), type = String.fromCharCode(...src.subarray(p + 4, p + 8)), end = p + 12 + len;
+    if (type !== 'pHYs') out.push(src.subarray(p, end));
+    if (type === 'IHDR') out.push(ch);
+    p = end;
+  }
+  return new Blob(out, {type: 'image/png'});
+}
+const toBlob = c => new Promise((ok, bad) => c.toBlob(b => b ? ok(b) : bad(new Error('toBlob')), 'image/png'));
+function presetName(){
+  const T = XTYPES[xo.type];
+  for (const k of ['task', 'sol']) if (Object.keys(T[k]).every(q => xo[q] === T[k][q])) return k;
+  return null;
+}
+let xLast = null;
+function xMsg(text, cls){ const m = $('xmsg'); m.textContent = text; m.className = cls || ''; }
+function xUpdate(){
+  document.querySelectorAll('[data-x]').forEach(cb => cb.checked = !!xo[cb.dataset.x]);
+  const pn = presetName();
+  document.querySelectorAll('#xpresets button').forEach(b => b.classList.toggle('on', b.dataset.p === pn));
+  $('xtype').value = xo.type; $('xmono').value = xo.mono ? '1' : '0'; $('xcm').value = String(xo.cm);
+  $('xdens').value = xo.density; $('xdensVal').textContent = xo.density;
+  $('xvecRow').style.display = xo.P ? 'flex' : 'none';
+  $('xvecVal').textContent = '1 cm ≙ ' + fmtE(xo.vcm);
+  $('xpHint').style.display = xo.P ? 'block' : 'none';
+  $('xpPos').textContent = xo.pt ? `P = (${fmtM(xo.pt[0])}; ${fmtM(xo.pt[1])}) m` : '';
+  const r = renderExport(xo); xLast = r;
+  const sz = $('xsize');
+  if (!r.canvas){
+    sz.textContent = 'Joonis tuleks selle mõõtkavaga liiga suur – vali väiksem mõõtkava.'; sz.className = 'small warn';
+    $('xprev').removeAttribute('src'); return;
+  }
+  $('xprev').src = r.canvas.toDataURL('image/png');
+  let t = `Suurus paberil ${comma(r.fr.wcm.toFixed(1))} × ${comma(r.fr.hcm.toFixed(1))} cm (A4 lehe tekstiala on umbes 17 cm lai).`;
+  if (r.fr.wcm > 17.05) t += ' Ei mahu A4 laiusesse – vali väiksem mõõtkava.';
+  sz.textContent = t; sz.className = 'small' + (r.fr.wcm > 17.05 ? ' warn' : '');
+}
+function autoCm(){
+  // suurim mõõtkava, millega joonis mahub A4 tekstialale (17 × 22 cm)
+  for (const cm of [5, 4, 3, 2.5, 2, 1.5, 1]){ const f = exportFrame(Object.assign({}, xo, {cm})); if (f.wcm <= 17.05 && f.hcm <= 22) return cm; }
+  return 1;
+}
+function xOpen(){
+  if (!items.some(isPlaced)){ setMsg('Paiguta enne joonisele laengud.'); return; }
+  xo.density = opts.density;
+  if (!xo.pt) xo.pt = defaultPoint();
+  xo.vcm = defaultVcm(xo.pt);
+  xo.cm = autoCm(); xMsg('');
+  $('xmodal').classList.add('on');
+  xUpdate();
+}
+const xClose = () => $('xmodal').classList.remove('on');
+$('xopen').onclick = xOpen;
+$('xclose').onclick = xClose;
+$('xmodal').addEventListener('click', e => { if (e.target === $('xmodal')) xClose(); });
+addEventListener('keydown', e => { if (e.key === 'Escape' && $('xmodal').classList.contains('on')) xClose(); });
+document.querySelectorAll('[data-x]').forEach(cb => cb.onchange = () => { xo[cb.dataset.x] = cb.checked; xMsg(''); xUpdate(); });
+$('xtype').onchange = e => { xo.type = e.target.value; Object.assign(xo, XTYPES[xo.type].task); xo.cm = autoCm(); xMsg(''); xUpdate(); };
+document.querySelectorAll('#xpresets button').forEach(b => b.onclick = () => { Object.assign(xo, XTYPES[xo.type][b.dataset.p]); xMsg(''); xUpdate(); });
+$('xmono').onchange = e => { xo.mono = e.target.value === '1'; xUpdate(); };
+$('xcm').onchange = e => { xo.cm = +e.target.value; xUpdate(); };
+$('xdens').onchange = e => { xo.density = +e.target.value; xUpdate(); };
+$('xdens').oninput = e => { $('xdensVal').textContent = e.target.value; };
+$('xvecLonger').onclick = () => { xo.vcm = stepNice(xo.vcm, -1); xUpdate(); };
+$('xvecShorter').onclick = () => { xo.vcm = stepNice(xo.vcm, 1); xUpdate(); };
+// klõps eelvaatel valib punkti P (joondatakse 0,25 m võrku, kui joondamine on sees)
+$('xprev').addEventListener('click', e => {
+  if (!xLast || !xLast.canvas) return;
+  const r = $('xprev').getBoundingClientRect(), fr = xLast.fr;
+  const cx = (e.clientX - r.left) / r.width * fr.Wc, cy = (e.clientY - r.top) / r.height * fr.Hc;
+  if (cy > fr.Hfig) return;
+  const wx = snap((cx - fr.ox) / fr.ppm), wy = snap((fr.oy - cy) / fr.ppm);
+  xo.pt = [wx, wy]; xo.P = true;
+  xo.vcm = defaultVcm(xo.pt);
+  xMsg(''); xUpdate();
+});
+// claude.ai artefaktis ei tööta tavaline allalaadimislink: seal salvestatakse platvormi „downloads“ kaudu
+// (kasutaja kinnitab). github.io-s ja kohalikult window.claude puudub → tavaline allalaadimine.
+const IN_ARTIFACT = !!(window.claude && window.claude.use);
+let artDl = null;
+if (IN_ARTIFACT) window.claude.use('downloads').then(d => { artDl = d; }).catch(() => {});
+$('xdown').onclick = async () => {
+  if (!xLast || !xLast.canvas) return;
+  const pn = presetName();
+  const name = `elektrivali-${XTYPES[xo.type].file}-${pn === 'task' ? 'ulesanne' : (pn === 'sol' ? 'lahendus' : 'joonis')}.png`;
+  try {
+    const blob = await withDpi(await toBlob(xLast.canvas), DPI);
+    if (IN_ARTIFACT){
+      if (!artDl){ xMsg('Allalaadimine pole selles vaates saadaval – kasuta „Kopeeri“ või ava leht vanakrt.github.io/elektrivali.', 'err'); return; }
+      try { await artDl.save({filename: name, data: blob}); xMsg('Fail ' + name + ' salvestati.', 'ok'); }
+      catch (e){ xMsg(e && e.code === 'declined' ? 'Salvestamisest loobuti.' : 'Salvestamine ei õnnestunud (' + ((e && (e.code || e.message)) || e) + ').', e && e.code === 'declined' ? '' : 'err'); }
+      return;
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    xMsg('Fail ' + name + ' laaditi alla.', 'ok');
+  } catch (err){ xMsg('Allalaadimine ei õnnestunud: ' + err.message, 'err'); }
+};
+$('xcopy').onclick = async () => {
+  if (!xLast || !xLast.canvas) return;
+  try {
+    if (!window.ClipboardItem || !navigator.clipboard || !navigator.clipboard.write) throw new Error('see brauser ei luba pilti kopeerida');
+    await navigator.clipboard.write([new ClipboardItem({'image/png': toBlob(xLast.canvas)})]);
+    xMsg('Pilt on lõikelaual – kleebi dokumenti (Ctrl+V).', 'ok');
+  } catch (err){ xMsg('Kopeerimine ei õnnestunud (' + err.message + '). Kasuta allalaadimist.', 'err'); }
+};
+
+window.__fe = {xo, XTYPES, exportFrame, renderExport, defaultPoint, defaultVcm, stepNice, xOpen, xUpdate, fieldOne, fieldAt, potOne, potAt, placedPx, toPx, preset, items: () => items, autoLines: () => autoLines, userLines: () => userLines, eqStep: () => eqStep, K, PPM};
 </script>
 <div id="vmodal" role="dialog" aria-modal="true" aria-label="Videojuhend">
   <div class="vbox">
