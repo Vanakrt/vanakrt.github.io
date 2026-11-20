@@ -53,6 +53,32 @@
   #vmodal .vtop{display:flex;justify-content:space-between;align-items:center;color:#fff;font-size:14px;margin-bottom:8px;gap:12px}
   #vmodal .vtop button{flex-shrink:0;white-space:nowrap;background:#fff;color:#1f2937;border:0;border-radius:6px;padding:6px 12px;font-size:14px;cursor:pointer}
   #vmodal video{display:block;width:100%;max-height:82vh;background:#000;border-radius:10px}
+  /* töölehe joonis */
+  #xopen{width:100%;padding:8px 10px;font-weight:600}
+  #xmodal{position:fixed;inset:0;z-index:1000;background:rgba(15,23,42,.6);display:none;align-items:center;justify-content:center;padding:16px}
+  #xmodal.on{display:flex}
+  #xmodal .xbox{background:#fff;border-radius:12px;width:min(1180px,100%);max-height:94vh;display:flex;flex-direction:column;overflow:hidden}
+  #xmodal .xtop{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);gap:12px}
+  #xmodal .xtop b{font-size:16px}
+  #xmodal .xbody{display:flex;gap:16px;padding:14px;overflow:auto;min-height:0}
+  #xmodal .xprev{flex:1;min-width:0;display:flex;align-items:flex-start;justify-content:center;background:#f1f5f9;border-radius:8px;padding:10px}
+  #xmodal .xprev img{max-width:100%;max-height:72vh;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.18)}
+  #xmodal .xopts{width:290px;flex:none}
+  #xmodal .xopts h2:first-child{margin-top:0}
+  #xmodal .xbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  #xmodal .xbtns button{padding:8px 12px;font-weight:600}
+  #xmodal .xbtns .main{background:#1f2937;color:#fff;border-color:#1f2937}
+  #xmsg{font-size:12.5px;margin-top:8px;min-height:1.2em}
+  #xmsg.err{color:#b91c1c}
+  #xmsg.ok{color:#15803d}
+  #xsize.warn{color:#b45309}
+  @media (max-width:760px){
+    #xmodal{padding:0}
+    #xmodal .xbox{max-height:100vh;height:100%;border-radius:0}
+    #xmodal .xbody{flex-direction:column}
+    #xmodal .xopts{width:auto}
+    #xmodal .xprev img{max-height:40vh}
+  }
 </style>
 </head>
 <body>
@@ -110,6 +136,10 @@
       <span class="small" id="zoomVal"></span>
     </div>
 
+    <h2>Töölehele</h2>
+    <button type="button" id="xopen">Joonis töölehele (PNG)…</button>
+    <div class="small" style="margin-top:4px">Prinditav joonis kontrolltöösse või töölehele: ülesanne (ilma kiirte ja kujutiseta) ja lahendus.</div>
+
     <h2>Kujutis</h2>
     <div id="readout"></div>
 
@@ -126,6 +156,7 @@
       • Tähistused: d – eseme kaugus, f – kujutise kaugus, F – fookuskaugus, h ja H – eseme ja kujutise kõrgus.<br>
       • Valem: 1/F = 1/d + 1/f; suurendus Γ = H/h = |f|/d; optiline tugevus D = 1/F (F meetrites).<br>
       • Märgid: F &lt; 0 nõgusläätse ja kumerpeegli korral; f &lt; 0, kui kujutis on näiv.
+      • <b>Joonis töölehele</b>: prinditav pilt praegusest olukorrast. „Ülesanne“ peidab kiired ja kujutise (õpilane konstrueerib ise), „Lahendus“ näitab kõike – mõlemal on sama raam, nii et sobivad ülesandeks ja vastuseks. Allalaaditud PNG on 300 dpi ja läheb Wordi valitud mõõtkavas (nt 1 cm joonisel = 3 mm paberil).
     </div>
   </aside>
   <main id="main">
@@ -133,12 +164,52 @@
     <div id="hint">Lohista eset või fookust F</div>
   </main>
 </div>
+<div id="xmodal" role="dialog" aria-modal="true" aria-label="Joonis töölehele">
+  <div class="xbox">
+    <div class="xtop"><b>Joonis töölehele</b><button type="button" id="xclose">✕ Sulge</button></div>
+    <div class="xbody">
+      <div class="xprev"><img id="xprev" alt="Joonise eelvaade"></div>
+      <div class="xopts">
+        <h2>Mida joonisel näidata</h2>
+        <div class="types" id="xpresets">
+          <button type="button" data-p="task">Ülesanne</button>
+          <button type="button" data-p="sol">Lahendus</button>
+        </div>
+        <div style="height:8px"></div>
+        <label class="chk"><input type="checkbox" data-x="rays"> kiired (konstruktsioon)</label>
+        <label class="chk"><input type="checkbox" data-x="image"> kujutis</label>
+        <label class="chk"><input type="checkbox" data-x="dimD"> eseme kaugus d</label>
+        <label class="chk"><input type="checkbox" data-x="dimF"> kujutise kaugus f</label>
+        <label class="chk"><input type="checkbox" data-x="labels"> sõnad („ese“, „kujutis“, elemendi nimi)</label>
+        <label class="chk"><input type="checkbox" data-x="ticks"> sentimeetrijaotised peateljel</label>
+        <label class="chk"><input type="checkbox" data-x="grid"> ruudustik (1 cm ruudud)</label>
+        <div class="small">Fookused F (ja 2F või C) ning punktide tähed on alati joonisel.</div>
+        <h2>Välimus</h2>
+        <div class="row"><label>Värvid
+          <select id="xmono"><option value="1" selected>mustvalge</option><option value="0">värviline</option></select></label></div>
+        <div class="row"><label>Paberil 1 cm =
+          <select id="xmm"><option value="10">10 mm</option><option value="5">5 mm</option><option value="4">4 mm</option><option value="3">3 mm</option><option value="2">2 mm</option><option value="1">1 mm</option></select></label></div>
+        <div class="small" id="xsize"></div>
+        <div class="xbtns">
+          <button type="button" class="main" id="xdown">⬇ Laadi alla PNG</button>
+          <button type="button" id="xcopy">Kopeeri</button>
+        </div>
+        <div id="xmsg"></div>
+        <div class="small" style="margin-top:8px">Allalaaditud pilt on 300 dpi ja läheb Wordi õiges suuruses (mõõtkava järgi). Kopeeritud pildi suurust võib dokument muuta – kui mõõtmine on oluline, kasuta allalaadimist.</div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
 'use strict';
 const TOUCH = window.matchMedia && matchMedia('(pointer: coarse)').matches;   // puuteekraan: suuremad käepidemed
 const $ = id => document.getElementById(id);
-const main = $('main'), cv = $('cv'), ctx = cv.getContext('2d');
+const main = $('main'), cv = $('cv');
+let ctx = cv.getContext('2d');
+// Töölehe joonise eksport: null = tavaline ekraanijoonis, muidu ekspordi seaded (vt renderExport)
+let EXP = null;
+const show = k => !EXP || EXP[k];
 let W = 0, H = 0, DPR = 1;
 
 const st = { type:'conv', F:10, d:25, h:4, obj:'arrow', fan:false, dims:true, snap:true, S:18,
@@ -184,11 +255,12 @@ function fmt(v, dec = 1){
   const r = Math.abs(v) < 0.5 * Math.pow(10, -dec) ? 0 : v;
   return minus(comma(r.toFixed(dec)));
 }
-const X0 = () => TYPES[st.type].mirror ? Math.round(W*0.68) : Math.round(W/2);   // elemendi asukoht ekraanil
+const X0 = () => EXP ? EXP.x0 : (TYPES[st.type].mirror ? Math.round(W*0.68) : Math.round(W/2));   // elemendi asukoht ekraanil
+const YC = () => EXP ? EXP.y0 : H/2;                                                                // peatelje kõrgus ekraanil
 const X = x => X0() + x * st.S;      // element asub x = 0 juures
-const Y = y => H/2 - y * st.S;
+const Y = y => YC() - y * st.S;
 const toX = px => (px - X0()) / st.S;
-const toY = py => (H/2 - py) / st.S;
+const toY = py => (YC() - py) / st.S;
 const snapv = v => st.snap ? Math.round(v * 2) / 2 : v;
 
 /* ---------- optika ---------- */
@@ -311,26 +383,39 @@ function drawRay(o, r, color, width, alpha, noArrows){
 }
 function drawAxis(){
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
-  // ruudustik 5 cm
-  const step = 5 * st.S;
-  ctx.strokeStyle = 'rgba(15,23,42,0.05)'; ctx.lineWidth = 1; ctx.beginPath();
-  for (let x = X0() % step; x < W; x += step){ ctx.moveTo(Math.round(x)+.5, 0); ctx.lineTo(Math.round(x)+.5, H); }
-  for (let y = H/2 % step; y < H; y += step){ ctx.moveTo(0, Math.round(y)+.5); ctx.lineTo(W, Math.round(y)+.5); }
-  ctx.stroke();
+  const yc = YC();
+  if (!EXP){
+    // ruudustik 5 cm
+    const step = 5 * st.S;
+    ctx.strokeStyle = 'rgba(15,23,42,0.05)'; ctx.lineWidth = 1; ctx.beginPath();
+    for (let x = X0() % step; x < W; x += step){ ctx.moveTo(Math.round(x)+.5, 0); ctx.lineTo(Math.round(x)+.5, H); }
+    for (let y = yc % step; y < H; y += step){ ctx.moveTo(0, Math.round(y)+.5); ctx.lineTo(W, Math.round(y)+.5); }
+    ctx.stroke();
+  } else if (EXP.grid){
+    // töölehe ruudustik: 1 cm ruudud, iga 5 cm tumedam joon (ruudud algavad elemendist ja peateljest)
+    for (const [step, col] of [[1, 'rgba(0,0,0,0.25)'], [5, 'rgba(0,0,0,0.45)']]){
+      const s = step * st.S;
+      ctx.strokeStyle = col; ctx.lineWidth = 0.6; ctx.beginPath();
+      for (let x = X0() % s; x < W; x += s){ ctx.moveTo(x, 0); ctx.lineTo(x, H); }
+      for (let y = yc % s; y < H; y += s){ ctx.moveTo(0, y); ctx.lineTo(W, y); }
+      ctx.stroke();
+    }
+  }
   // peatelg
-  line(0, Math.round(H/2)+.5, W, Math.round(H/2)+.5, '#475569', 1.2);
+  line(0, Math.round(yc)+.5, W, Math.round(yc)+.5, '#475569', 1.2);
+  if (EXP && !EXP.ticks) return;
   // jaotised iga cm, sildid iga 10 cm
-  ctx.strokeStyle = '#94a3b8'; ctx.beginPath();
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1; ctx.beginPath();
   const i0 = Math.floor(-X0()/st.S), i1 = Math.ceil((W - X0())/st.S);
   for (let i = i0; i <= i1; i++){
     if (st.S < 6 && i % 5) continue;
     const x = Math.round(X(i)) + .5, len = i % 10 === 0 ? 6 : (i % 5 === 0 ? 4 : 2);
-    ctx.moveTo(x, H/2 - len); ctx.lineTo(x, H/2 + len);
+    ctx.moveTo(x, yc - len); ctx.lineTo(x, yc + len);
   }
   ctx.stroke();
   ctx.font = '11px system-ui, sans-serif'; ctx.fillStyle = '#94a3b8'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-  for (let i = i0; i <= i1; i++) if (i % 10 === 0 && i !== 0) ctx.fillText(minus(String(i)), X(i), H/2 - 8);
-  ctx.textAlign = 'right'; ctx.fillText('cm', W - 6, H/2 - 8);
+  for (let i = i0; i <= i1; i++) if (i % 10 === 0 && i !== 0 && (!EXP || (X(i) > 16 && X(i) < W - 34))) ctx.fillText(minus(String(i)), X(i), yc - 8);   // töölehel ei lõigata numbreid serva taha
+  ctx.textAlign = 'right'; ctx.fillText('cm', W - 6, yc - 8);
 }
 function drawElement(o, A){
   const x = X(0), y1 = Y(A), y2 = Y(-A);
@@ -367,8 +452,10 @@ function drawElement(o, A){
     for (let yy = y1; yy <= y2 + 0.5; yy += 2){ const xs = xa(Math.min(yy, y2)); if (yy === y1) ctx.moveTo(xs, yy); else ctx.lineTo(xs, Math.min(yy, y2)); }
     ctx.stroke();
   }
-  ctx.font = '600 12px system-ui, sans-serif'; ctx.fillStyle = EL_COLOR; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-  ctx.fillText(o.T.name, x, y1 - 12);
+  if (show('labels')){
+    ctx.font = '600 12px system-ui, sans-serif'; ctx.fillStyle = EL_COLOR; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillText(o.T.name, x, y1 - 12);
+  }
   ctx.restore();
 }
 function marker(xcm, text, color, big){
@@ -486,7 +573,8 @@ function drawSecondaryAxis(b){
   // punkt P
   ctx.save(); ctx.fillStyle = '#0f172a'; ctx.beginPath(); ctx.arc(X(P[0]), Y(P[1]), 4.5, 0, 2*Math.PI); ctx.fill(); ctx.restore();
   label(X(P[0]) + 12, Y(P[1]) - 12, 'P', '#0f172a');
-  // lohistatav käepide tabamispunktis
+  // lohistatav käepide tabamispunktis (töölehe joonisel ei ole)
+  if (EXP) return;
   const hx = secHitX();
   ctx.save(); ctx.beginPath(); ctx.arc(hx, Y(y1), hover && hover.what === 'sec' ? 8 : 6, 0, 2*Math.PI);
   ctx.strokeStyle = SEC_COLOR; ctx.lineWidth = 2; ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.fill(); ctx.stroke(); ctx.restore();
@@ -535,21 +623,27 @@ function arrowBetween(x1, y1, x2, y2, color, dashed){
   head(x2 - ux*5, y2 - uy*5, ux, uy, 16, color);
 }
 
+// Elemendi ava (cm): katab kiirte tabamiskõrgused ja eseme punktid
+function aperture(b, KP){
+  const rayPts = KP.filter(k => Math.abs(k.y) > 1e-9 && (!multi() || st.pts[k.name]));
+  const raySets = rayPts.map(k => { const o = imgPt(b, k.x, k.y); return {k, o, R: rayDefs(o).filter(r => st.rays[r.id])}; });
+  const hr = helperRay(b);
+  const secOn = st.obj === 'triangle' && st.sec;
+  const ys = [].concat(...raySets.map(rs => rs.R.map(r => r.y)), KP.map(k => k.y), hr ? [hr.y0] : [], secOn ? [st.secY] : []);
+  const A = Math.max(6, ...ys.map(y => Math.abs(y)*1.12 + 0.5), ...KP.map(k => Math.abs(k.y)*1.4));
+  return {A, raySets, hr, secOn};
+}
+// Töölehe joonisel piiratakse ava kahe eseme kõrgusega (muidu nt kõveruskeskpunkti lähedal oleva eseme
+// C-kiir teeks joonise väga kõrgeks); kaugemale ulatuv kiir läheb raamist välja nagu ekraanilgi
+const exportA = (A, KP) => Math.min(A, Math.max(6, 2 * Math.max(...KP.map(k => Math.abs(k.y))) + 1));
 function draw(){
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   drawAxis();
   const b = base();
   const KP = keyPoints();
-  // kiired: iga valitud teljeväline punkt
-  const rayPts = KP.filter(k => Math.abs(k.y) > 1e-9 && (!multi() || st.pts[k.name]));
-  const raySets = rayPts.map(k => { const o = imgPt(b, k.x, k.y); return {k, o, R: rayDefs(o).filter(r => st.rays[r.id])}; });
-  const hr = helperRay(b);
-  // elemendi ava: katab kiirte tabamiskõrgused
-  const maxCm = (H/2 - 40) / st.S;
-  const secOn = st.obj === 'triangle' && st.sec;
-  const ys = [].concat(...raySets.map(rs => rs.R.map(r => r.y)), KP.map(k => k.y), hr ? [hr.y0] : [], secOn ? [st.secY] : []);
-  let A = Math.max(6, ...ys.map(y => Math.abs(y)*1.12 + 0.5), ...KP.map(k => Math.abs(k.y)*1.4));
-  A = Math.min(A, maxCm);
+  const ap = aperture(b, KP), {raySets, hr, secOn} = ap;
+  // ekraanil piiratakse ava joonise kõrgusega; töölehe joonise raam arvutatakse ava järgi
+  const A = EXP ? exportA(ap.A, KP) : Math.min(ap.A, (H/2 - 40) / st.S);
   drawElement(b, A);
   // fookused ja kõveruskeskpunktid
   const Fa = st.F;
@@ -560,50 +654,55 @@ function draw(){
     marker(-Fa, 'F', '#b91c1c', true); marker(Fa, 'F', '#b91c1c', true);
     marker(-2*Fa, '2F', '#64748b', false); marker(2*Fa, '2F', '#64748b', false);
   }
-  // kiirtekimp (esimesest teljevälisest punktist)
-  const fanPt = KP.find(k => Math.abs(k.y) > 1e-9);
-  if (st.fan && fanPt){
-    const o = imgPt(b, fanPt.x, fanPt.y), N = 13;
-    for (let k = 0; k < N; k++){
-      const y = -A*0.95 + 2*A*0.95*k/(N - 1);
-      drawRay(o, {id:0, y}, '#94a3b8', 1, 0.6, true);
+  if (show('rays')){
+    // kiirtekimp (esimesest teljevälisest punktist)
+    const fanPt = KP.find(k => Math.abs(k.y) > 1e-9);
+    if (st.fan && fanPt){
+      const o = imgPt(b, fanPt.x, fanPt.y), N = 13;
+      for (let k = 0; k < N; k++){
+        const y = -A*0.95 + 2*A*0.95*k/(N - 1);
+        drawRay(o, {id:0, y}, '#94a3b8', 1, 0.6, true);
+      }
     }
+    for (const rs of raySets) for (const r of rs.R) drawRay(rs.o, r, RAY_COLORS[r.id], 1.8, 1);
+    if (hr) drawHelper(b, hr);
+    if (secOn) drawSecondaryAxis(b);
   }
-  for (const rs of raySets) for (const r of rs.R) drawRay(rs.o, r, RAY_COLORS[r.id], 1.8, 1);
-  if (hr) drawHelper(b, hr);
-  if (secOn) drawSecondaryAxis(b);
 
   // ese ja kujutis
   if (st.obj === 'arrow' || st.obj === 'candle'){
     const o = imgPt(b, -st.d, st.h);
     drawArrowObj(-st.d, st.h, OBJ_COLOR, false, false);
-    label(X(-st.d), Y(st.h) + (st.h >= 0 ? -16 : 16), 'ese', OBJ_COLOR);
-    if (!o.inf){
+    if (show('labels')) label(X(-st.d), Y(st.h) + (st.h >= 0 ? -16 : 16), 'ese', OBJ_COLOR);
+    if (!o.inf && show('image')){
       drawArrowObj(o.imgX, o.hp, IMG_COLOR, !o.real, true);
       const lx = X(o.imgX), ly = Y(o.hp) + (o.hp >= 0 ? -16 : 16);
-      if (lx > 0 && lx < W) label(lx, ly, o.real ? 'kujutis' : 'näiv kujutis', IMG_COLOR);
+      if (lx > 0 && lx < W && show('labels')) label(lx, ly, o.real ? 'kujutis' : 'näiv kujutis', IMG_COLOR);
     }
-    if (st.dims){
-      const yd = -Math.min(A + 2.2, (H/2 - 70) / st.S);
-      dimension(-st.d, 0, yd, 'd = ' + fmt(st.d) + ' cm', OBJ_COLOR);
-      if (!o.inf){
+    const showD = EXP ? EXP.dimD : st.dims, showF = EXP ? EXP.dimF : st.dims;
+    if (showD || showF){
+      const yd = EXP ? -(A + 2.2) : -Math.min(A + 2.2, (H/2 - 70) / st.S);
+      if (showD) dimension(-st.d, 0, yd, 'd = ' + fmt(st.d) + ' cm', OBJ_COLOR);
+      if (!o.inf && showF){
         const yf = o.imgX < 0 ? yd - 2.2 : yd;
         dimension(0, o.imgX, yf, 'f = ' + fmt(o.f) + ' cm', IMG_COLOR);
       }
     }
-    handle(X(-st.d), Y(st.h), hover && hover.what === 'tip');
+    if (!EXP) handle(X(-st.d), Y(st.h), hover && hover.what === 'tip');
   } else {
     if (st.obj === 'arrow2'){
       const [Pa, Pb] = KP;
       arrowBetween(X(Pa.x), Y(Pa.y), X(Pb.x), Y(Pb.y), OBJ_COLOR, false);
       const qa = imgPt(b, Pa.x, Pa.y), qb = imgPt(b, Pb.x, Pb.y);
       // sirglõigu kujutis on sirglõik, kui lõik ei ulatu üle fookustasandi; muidu kaks eraldi osa
-      if (!qa.inf && !qb.inf && Math.sign(-Pa.x - b.Fs) === Math.sign(-Pb.x - b.Fs))
-        arrowBetween(X(qa.imgX), Y(qa.hp), X(qb.imgX), Y(qb.hp), IMG_COLOR, !qa.real);
-      else drawPolyImage(b, KP, false);
+      if (show('image')){
+        if (!qa.inf && !qb.inf && Math.sign(-Pa.x - b.Fs) === Math.sign(-Pb.x - b.Fs))
+          arrowBetween(X(qa.imgX), Y(qa.hp), X(qb.imgX), Y(qb.hp), IMG_COLOR, !qa.real);
+        else drawPolyImage(b, KP, false);
+      }
     } else {
       drawPoly(KP, OBJ_COLOR, 'rgba(15,118,110,0.15)');
-      drawPolyImage(b, KP, true);
+      if (show('image')) drawPolyImage(b, KP, true);
     }
     // punktide nimed ja kujutised
     const cx = KP.reduce((a, k) => a + k.x, 0) / KP.length, cy = KP.reduce((a, k) => a + k.y, 0) / KP.length;
@@ -611,17 +710,17 @@ function draw(){
       const q = imgPt(b, k.x, k.y);
       const ox = X(k.x) + (k.x < cx ? -14 : 14), oy = Y(k.y) + (k.y > cy || k.y === 0 && cy < 0 ? -14 : 14);
       label(ox, oy, k.name, OBJ_COLOR);
-      if (!q.inf){
+      if (!q.inf && show('image')){
         const ix = X(q.imgX), iy = Y(q.hp);
         if (Math.abs(k.y) < 1e-9){ ctx.save(); ctx.fillStyle = IMG_COLOR; ctx.beginPath(); ctx.arc(ix, iy, 4.5, 0, 2*Math.PI); ctx.fill(); ctx.restore(); }
         const qcx = imgPt(b, cx, cy);
         const lx = ix + (qcx.inf ? 14 : (q.imgX < qcx.imgX ? -16 : 16)), ly = iy + (qcx.inf ? -14 : (q.hp > qcx.hp || (Math.abs(q.hp) < 1e-9 && qcx.hp < 0) ? -14 : 14));
         if (ix > -20 && ix < W + 20) label(lx, ly, k.name + '′', IMG_COLOR);
       }
-      handle(X(k.x), Y(k.y), hover && hover.what === 'pt' && hover.name === k.name);
+      if (!EXP) handle(X(k.x), Y(k.y), hover && hover.what === 'pt' && hover.name === k.name);
     }
   }
-  readout(b, KP);
+  if (!EXP) readout(b, KP);
 }
 function handle(x, y, active){
   ctx.save(); ctx.beginPath(); ctx.arc(x, y, active ? 8 : 6, 0, 2*Math.PI);
@@ -826,7 +925,184 @@ function resize(){
 new ResizeObserver(resize).observe(main);
 if (/github\.io$/.test(location.hostname)) $('back').style.display = 'block';
 renderRayList(); renderPtList(); syncInputs(); resize();
-window.__op = {st, optics, imgPt, base, keyPoints, helperRay, rayDefs, outDir, draw, renderPtList, toX, toY, X, Y};
+/* ---------- joonis töölehele (PNG eksport) ---------- */
+const EXP_K = 2.75;                    // seadme pikslit CSS-piksli kohta: 13 px kiri ≈ 3 mm, 1,8 px kiir ≈ 0,4 mm
+const DPI = 300, PX_CM = DPI / 2.54;   // pikslit paberi sentimeetri kohta
+const MAX_PX = 16e6;                   // telefonibrauserite lõuendi pindala piir (iOS)
+const xo = {rays:false, image:false, dimD:true, dimF:false, labels:true, ticks:true, grid:false, mono:true, mm:5};
+const PRESETS = {
+  task: {rays:false, image:false, dimD:true, dimF:false},
+  sol:  {rays:true,  image:true,  dimD:true, dimF:true},
+};
+// Töölehe joonise raam (cm, elemendi raamistikus): sõltub ainult geomeetriast, mitte sellest, mis on näha –
+// nii on ülesande ja lahenduse joonis täpselt sama suuruse ja asendiga.
+function exportFrame(opt){
+  const b = base(), KP = keyPoints(), S = PX_CM * (opt.mm / 10) / EXP_K;
+  const A = exportA(aperture(b, KP).A, KP);
+  const xs = [0, ...KP.map(k => k.x)];
+  if (b.mirror) xs.push(-b.Fs, -2*b.Fs); else xs.push(-st.F, st.F, -2*st.F, 2*st.F);
+  const lim = 2.5 * Math.max(...xs.map(Math.abs));
+  let up = A, down = A, cut = false;
+  for (const k of KP){ up = Math.max(up, k.y); down = Math.max(down, -k.y); }
+  for (const k of KP){
+    const q = imgPt(b, k.x, k.y);
+    if (q.inf) continue;
+    if (Math.abs(q.imgX) <= lim && Math.abs(q.hp) <= 3*A){ xs.push(q.imgX); up = Math.max(up, q.hp); down = Math.max(down, -q.hp); }
+    else cut = true;                   // kujutis väga kaugel: jääb joonisest välja
+  }
+  if (st.obj === 'triangle' && st.sec){
+    const dA = -st.tri[0].x, u = st.secY / dA;
+    const pivotX = b.mirror ? -2*b.Fs : 0, fpX = b.mirror ? -b.Fs : b.Fs, Py = u * (fpX - pivotX);
+    if (Math.abs(Py) <= 3*A){ xs.push(fpX); up = Math.max(up, Py); down = Math.max(down, -Py); }
+  }
+  const pad = 40 / S;                  // ruumi siltidele (40 CSS px)
+  let top = up + 28 / S, bottom = down + 28 / S;
+  if (!multi() && (opt.dimD || opt.dimF)){
+    const o = imgPt(b, -st.d, st.h);
+    bottom = Math.max(bottom, A + 2.2 + (!o.inf && o.imgX < 0 ? 2.2 : 0) + 22 / S);
+  }
+  const xl = Math.min(...xs) - pad, xr = Math.max(...xs) + pad;
+  const Wc = Math.ceil((xr - xl) * S), Hc = Math.ceil((top + bottom) * S);
+  return {S, xl, Wc, Hc, x0: -xl * S, y0: top * S, cut,
+          wcm: Math.round(Wc * EXP_K) / PX_CM, hcm: Math.round(Hc * EXP_K) / PX_CM,
+          tooBig: Math.round(Wc * EXP_K) * Math.round(Hc * EXP_K) > MAX_PX};
+}
+// Mustvalge: iga värv → must, hall või helehall (heledus järgi); läbipaistvad täited jäävad heledaks halliks
+function mono(v){
+  if (typeof v !== 'string') return v;
+  let r, g, b, a = 1, m;
+  if (v[0] === '#'){
+    let h = v.slice(1); if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    r = parseInt(h.slice(0, 2), 16); g = parseInt(h.slice(2, 4), 16); b = parseInt(h.slice(4, 6), 16);
+  } else if ((m = v.match(/rgba?\(([^)]+)\)/))){
+    const q = m[1].split(',').map(parseFloat); [r, g, b] = q; if (q.length > 3) a = q[3];
+  } else return v;
+  if (r >= 250 && g >= 250 && b >= 250) return v;          // valge (siltide taust) jääb
+  if (a < 0.3) return `rgba(0,0,0,${(a * 0.7).toFixed(3)})`;
+  const L = (0.2126*r + 0.7152*g + 0.0722*b) / 255;
+  const k = L > 0.8 ? 238 : (L > 0.6 ? 140 : 0);
+  return a < 1 ? `rgba(${k},${k},${k},${a})` : `rgb(${k},${k},${k})`;
+}
+function monoCtx(c){
+  for (const p of ['strokeStyle', 'fillStyle']){
+    const d = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, p);
+    Object.defineProperty(c, p, {configurable: true, get(){ return d.get.call(c); }, set(v){ d.set.call(c, mono(v)); }});
+  }
+}
+// Joonistab töölehe joonise eraldi lõuendile; ekraani olek taastatakse
+function renderExport(opt){
+  const fr = exportFrame(opt);
+  if (fr.tooBig) return {fr, canvas: null};
+  const keep = {W, H, DPR, S: st.S, ctx};
+  const c = document.createElement('canvas');
+  c.width = Math.round(fr.Wc * EXP_K); c.height = Math.round(fr.Hc * EXP_K);
+  try {
+    W = fr.Wc; H = fr.Hc; DPR = EXP_K; st.S = fr.S;
+    ctx = c.getContext('2d'); if (opt.mono) monoCtx(ctx);
+    EXP = Object.assign({}, opt, {x0: fr.x0, y0: fr.y0});
+    draw();
+  } finally {
+    EXP = null; ({W, H, DPR} = keep); st.S = keep.S; ctx = keep.ctx;
+    draw();
+  }
+  return {fr, canvas: c};
+}
+// PNG-le füüsilise suuruse märge (pHYs, 300 dpi), et Word paneks pildi mõõtkava järgi õiges suuruses
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++){ let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(u8){ let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC_T[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+async function withDpi(blob, dpi){
+  const src = new Uint8Array(await blob.arrayBuffer()), sv = new DataView(src.buffer);
+  const ppm = Math.round(dpi / 0.0254);
+  const ch = new Uint8Array(21), cv2 = new DataView(ch.buffer);
+  cv2.setUint32(0, 9); ch.set([112, 72, 89, 115], 4); cv2.setUint32(8, ppm); cv2.setUint32(12, ppm); ch[16] = 1;
+  cv2.setUint32(17, crc32(ch.subarray(4, 17)));
+  const out = [src.subarray(0, 8)];
+  for (let p = 8; p + 12 <= src.length; ){
+    const len = sv.getUint32(p), type = String.fromCharCode(...src.subarray(p + 4, p + 8)), end = p + 12 + len;
+    if (type !== 'pHYs') out.push(src.subarray(p, end));
+    if (type === 'IHDR') out.push(ch);
+    p = end;
+  }
+  return new Blob(out, {type: 'image/png'});
+}
+const toBlob = c => new Promise((ok, bad) => c.toBlob(b => b ? ok(b) : bad(new Error('toBlob')), 'image/png'));
+const TYPE_FILE = {concave:'noguspeegel', convex:'kumerpeegel', conv:'kumerlaats', div:'noguslaats'};
+function presetName(){
+  for (const [k, p] of Object.entries(PRESETS)) if (Object.keys(p).every(q => xo[q] === p[q])) return k;
+  return null;
+}
+let xLast = null;
+function xMsg(text, cls){ const m = $('xmsg'); m.textContent = text; m.className = cls || ''; }
+function xUpdate(){
+  document.querySelectorAll('[data-x]').forEach(cb => cb.checked = !!xo[cb.dataset.x]);
+  const pn = presetName();
+  document.querySelectorAll('#xpresets button').forEach(b => b.classList.toggle('on', b.dataset.p === pn));
+  $('xmono').value = xo.mono ? '1' : '0'; $('xmm').value = String(xo.mm);
+  const r = renderExport(xo); xLast = r;
+  const sz = $('xsize');
+  if (!r.canvas){
+    sz.textContent = 'Joonis tuleks selle mõõtkavaga liiga suur – vali väiksem mõõtkava.'; sz.className = 'small warn';
+    $('xprev').removeAttribute('src'); return;
+  }
+  $('xprev').src = r.canvas.toDataURL('image/png');
+  let t = `Suurus paberil ${fmt(r.fr.wcm)} × ${fmt(r.fr.hcm)} cm (A4 lehe tekstiala on umbes 17 cm lai).`;
+  if (r.fr.wcm > 17.05) t += ' Ei mahu A4 laiusesse – vali väiksem mõõtkava.';
+  if (r.fr.cut && xo.image) t += ' Kujutis on väga kaugel ja jääb joonisest välja.';
+  sz.textContent = t; sz.className = 'small' + (r.fr.wcm > 17.05 || (r.fr.cut && xo.image) ? ' warn' : '');
+}
+function autoMm(){
+  // suurim mõõtkava, millega joonis mahub A4 tekstiala laiusesse (17 cm)
+  for (const mm of [10, 5, 4, 3, 2, 1]) if (exportFrame(Object.assign({}, xo, {mm})).wcm <= 17.05) return mm;
+  return 1;
+}
+function xOpen(){
+  xo.mm = autoMm(); xMsg('');
+  $('xmodal').classList.add('on');
+  xUpdate();
+}
+const xClose = () => $('xmodal').classList.remove('on');
+$('xopen').onclick = xOpen;
+$('xclose').onclick = xClose;
+$('xmodal').addEventListener('click', e => { if (e.target === $('xmodal')) xClose(); });
+addEventListener('keydown', e => { if (e.key === 'Escape' && $('xmodal').classList.contains('on')) xClose(); });
+document.querySelectorAll('[data-x]').forEach(cb => cb.onchange = () => { xo[cb.dataset.x] = cb.checked; xMsg(''); xUpdate(); });
+document.querySelectorAll('#xpresets button').forEach(b => b.onclick = () => { Object.assign(xo, PRESETS[b.dataset.p]); xMsg(''); xUpdate(); });
+$('xmono').onchange = e => { xo.mono = e.target.value === '1'; xUpdate(); };
+$('xmm').onchange = e => { xo.mm = +e.target.value; xUpdate(); };
+// claude.ai artefaktis ei tööta tavaline allalaadimislink: seal salvestatakse platvormi „downloads“ kaudu
+// (kasutaja kinnitab). github.io-s ja kohalikult window.claude puudub → tavaline allalaadimine.
+const IN_ARTIFACT = !!(window.claude && window.claude.use);
+let artDl = null;
+if (IN_ARTIFACT) window.claude.use('downloads').then(d => { artDl = d; }).catch(() => {});
+$('xdown').onclick = async () => {
+  if (!xLast || !xLast.canvas) return;
+  const name = `optika-${TYPE_FILE[st.type]}-${presetName() === 'task' ? 'ulesanne' : (presetName() === 'sol' ? 'lahendus' : 'joonis')}.png`;
+  try {
+    const blob = await withDpi(await toBlob(xLast.canvas), DPI);
+    if (IN_ARTIFACT){
+      if (!artDl){ xMsg('Allalaadimine pole selles vaates saadaval – kasuta „Kopeeri“ või ava leht vanakrt.github.io/optika.', 'err'); return; }
+      try { await artDl.save({filename: name, data: blob}); xMsg('Fail ' + name + ' salvestati.', 'ok'); }
+      catch (e){ xMsg(e && e.code === 'declined' ? 'Salvestamisest loobuti.' : 'Salvestamine ei õnnestunud (' + ((e && (e.code || e.message)) || e) + ').', e && e.code === 'declined' ? '' : 'err'); }
+      return;
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    xMsg('Fail ' + name + ' laaditi alla.', 'ok');
+  } catch (err){ xMsg('Allalaadimine ei õnnestunud: ' + err.message, 'err'); }
+};
+$('xcopy').onclick = async () => {
+  if (!xLast || !xLast.canvas) return;
+  try {
+    if (!window.ClipboardItem || !navigator.clipboard || !navigator.clipboard.write) throw new Error('see brauser ei luba pilti kopeerida');
+    await navigator.clipboard.write([new ClipboardItem({'image/png': toBlob(xLast.canvas)})]);
+    xMsg('Pilt on lõikelaual – kleebi dokumenti (Ctrl+V).', 'ok');
+  } catch (err){ xMsg('Kopeerimine ei õnnestunud (' + err.message + '). Kasuta allalaadimist.', 'err'); }
+};
+
+window.__op = {st, optics, imgPt, base, keyPoints, helperRay, rayDefs, outDir, draw, renderPtList, toX, toY, X, Y,
+               xo, PRESETS, exportFrame, renderExport, withDpi, toBlob, mono, xOpen, xUpdate, aperture};
 </script>
 <div id="vmodal" role="dialog" aria-modal="true" aria-label="Videojuhend">
   <div class="vbox">
