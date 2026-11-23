@@ -1,0 +1,6 @@
+{
+ "op_x1": "Uus nupp „Joonis töölehele“ teeb praegusest olukorrast prinditava joonise. Ülesande joonisel on kiired ja kujutis peidus, õpilane konstrueerib need ise.",
+ "op_x2": "Lahendusel on sama joonis koos kiirte ja kujutisega. Mõõtkava saad valida ise. Allalaaditud pilt läheb Wordi õiges suuruses.",
+ "ev_x1": "Uus nupp „Joonis töölehele“ teeb laengutest prinditava joonise. Kõigepealt vali ülesande tüüp, näiteks laengute märgid. Siis vali, kas tahad ülesannet või lahendust.",
+ "ev_x2": "Väljatugevuse ülesandes vali punkt P, klõpsates eelvaatel. Lahendusel on väljatugevuse vektorid mõõtkavas. Mõõtkava on kirjas joonise all."
+}

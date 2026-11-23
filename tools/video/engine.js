@@ -6,12 +6,15 @@ const fs = require('fs'), path = require('path');
 
 const FPS = 30, W = 1280, H = 720, SCALE = 1.5;
 const CLIPS = path.join(__dirname, 'clips');
-const URL = 'file://' + path.resolve(__dirname, '../../magnetvali/index.html');
+// stsenaarium võib anda oma lehe (sim: 'optika') ja kõnetekstide faili (clips: 'toolehele_clips.json'); vaikimisi magnetväli
+const SCEN = require(path.resolve(process.argv[2]));
+const URL = 'file://' + path.resolve(__dirname, '../../' + (SCEN.sim || 'magnetvali') + '/index.html');
+const CLIPS_JSON = path.join(__dirname, SCEN.clips || 'magnetvali_clips.json');
 
 function clipDur(id){
   const f = path.join(CLIPS, id + '.wav');
   if (fs.existsSync(f)) return parseFloat(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', f]).toString());
-  const t = JSON.parse(fs.readFileSync(path.join(__dirname, 'magnetvali_clips.json'), 'utf8'))[id] || '';
+  const t = JSON.parse(fs.readFileSync(CLIPS_JSON, 'utf8'))[id] || '';
   return t.length/14;                     // hinnang, kui klippi veel pole
 }
 
@@ -55,7 +58,7 @@ async function run(scenario, outFile){
   await page.addInitScript(CLOCK);
   await page.goto(URL);
   await page.evaluate(OVERLAY);
-  await page.evaluate(() => { document.getElementById('hint').style.display = 'none'; });
+  if (scenario.hideHint !== false) await page.evaluate(() => { const h = document.getElementById('hint'); if (h) h.style.display = 'none'; });
 
   const tmpV = outFile.replace(/\.mp4$/, '.video.mp4');
   const ff = spawn('ffmpeg', ['-v', 'error', '-y', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-',
@@ -148,13 +151,21 @@ async function run(scenario, outFile){
     await moveTo(x2, y2, sec); await page.mouse.up();
     await highlight(sel, false);
   }
+  // valik rippmenüüst: esiletõst, kursor, klõps-ring ja väärtus (natiivset menüüd ei avata – see ei paistaks videos)
+  async function choose(sel, value){
+    const [x, y] = await elCenter(sel);
+    await highlight(sel, true);
+    await moveTo(x, y, 0.6); await wait(0.15); await ring();
+    await page.selectOption(sel, value);
+    await wait(0.3); await highlight(sel, false);
+  }
   async function wheel(dy, n = 6){ for (let i = 0; i < n; i++){ await page.mouse.wheel(0, dy); await frame(); await frame(); } }
   async function caption(text){ await page.evaluate(t => { const c = document.getElementById('__cap'); c.textContent = t || ''; c.style.opacity = t ? 1 : 0; }, text); }
   async function card(t, s, u){ await page.evaluate(([t, s, u]) => { const c = document.getElementById('__card'); if (!t){ c.style.display = 'none'; return; } c.style.display = 'flex'; c.querySelector('.t').textContent = t; c.querySelector('.s').textContent = s || ''; c.querySelector('.u').textContent = u || ''; document.getElementById('__cur').style.display = 'none'; }, [t, s, u]);
     if (!t) await page.evaluate(() => { document.getElementById('__cur').style.display = ''; }); }
   const js = (f, a) => page.evaluate(f, a);
 
-  const api = {page, wait, moveTo, click, clickWorld, hoverWorld, dragScreen, dragWorld, slider, wheel, caption, card, js, world, scrollTo, highlight, cur};
+  const api = {page, wait, moveTo, click, choose, ring, clickWorld, hoverWorld, dragScreen, dragWorld, slider, wheel, caption, card, js, world, scrollTo, highlight, cur};
   for (const sc of scenario.scenes){
     const t0 = now();
     if (sc.caption !== undefined) await caption(sc.caption);
@@ -190,5 +201,4 @@ async function run(scenario, outFile){
   console.log('valmis', outFile, 'kestus', dur.toFixed(1), 's, vead:', errs);
 }
 
-const scen = require(path.resolve(process.argv[2]));
-run(scen, path.resolve(process.argv[3])).catch(e => { console.error(e); process.exit(1); });
+run(SCEN, path.resolve(process.argv[3])).catch(e => { console.error(e); process.exit(1); });
